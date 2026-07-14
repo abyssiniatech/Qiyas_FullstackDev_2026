@@ -12,6 +12,7 @@ C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsAp
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.AssemblyInfo.cs
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.csproj.CoreCompileInputs.cache
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.sourcelink.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rjimswa.dswa.cache.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
