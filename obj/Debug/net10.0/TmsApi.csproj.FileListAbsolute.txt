@@ -6,6 +6,15 @@ C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsAp
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsApi.runtimeconfig.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsApi.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsApi.pdb
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Logging.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.csproj.AssemblyReference.cache
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rpswa.dswa.cache.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.AssemblyInfoInputs.cache
@@ -22,6 +31,7 @@ C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\stati
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\staticwebassets.development.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\staticwebassets.build.endpoints.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\swae.build.ex.cache
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.csproj.Up2Date
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\refint\TmsApi.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.pdb
