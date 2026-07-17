@@ -1,26 +1,53 @@
-
-
 using Scalar.AspNetCore;
 using TmsApi.Middleware;
 using TmsApi.Services;
+using Microsoft.EntityFrameworkCore;
+using TmsApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add controllers
+
+// -------------------------
+// Services Configuration
+// -------------------------
+
+// Controllers
 builder.Services.AddControllers();
 
-// Add OpenAPI
+
+// Database - PostgreSQL + EF Core
+builder.Services.AddDbContext<TmsDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("TmsDatabase")
+    ));
+
+
+// OpenAPI
 builder.Services.AddOpenApi();
+
+
 
 var app = builder.Build();
 
-// OpenAPI JSON
+
+// -------------------------
+// HTTP Request Pipeline
+// -------------------------
+
+// Correlation ID middleware
+app.UseMiddleware<CorrelationIdMiddleware>();
+
+
+// OpenAPI JSON endpoint
 app.MapOpenApi();
 
-// Scalar UI
+
+// Scalar API Documentation
 app.MapScalarApiReference();
 
-// Controllers
+
+// API Controllers
 app.MapControllers();
+
 
 app.Run();
