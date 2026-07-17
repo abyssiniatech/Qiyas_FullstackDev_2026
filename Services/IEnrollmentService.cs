@@ -13,5 +13,5 @@ public interface IEnrollmentService
     Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync();
 
     Task<bool> DeleteAsync(string id);
-    Task<object?> EnrollAsync(object studentId, object courseCode);
+    Task EnrollAsync(object studentId, object courseCode);
 }

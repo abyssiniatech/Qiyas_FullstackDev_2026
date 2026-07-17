@@ -1,112 +1,61 @@
-using Microsoft.Extensions.Logging;
 using TmsApi.Models;
-
+using Scalar.AspNetCore;
 namespace TmsApi.Services;
-
 
 public class EnrollmentService : IEnrollmentService
 {
-    private readonly Dictionary<string, EnrollmentRecord> _store = new();
-
-    private readonly ILogger<EnrollmentService> _logger;
+    private readonly List<EnrollmentRecord> _enrollments = new();
 
 
-    public EnrollmentService(
-    ILogger<EnrollmentService> logger)
-{
-    _logger = logger;
+    public Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync()
+    {
+        return Task.FromResult<IReadOnlyList<EnrollmentRecord>>(_enrollments);
+    }
 
 
-    // Seed sample data
-    var enrollment1 = new EnrollmentRecord(
-        "1001",
-        "ST001",
-        "CS101",
-        DateTime.UtcNow);
+    public Task<EnrollmentRecord?> GetByIdAsync(string id)
+    {
+        var enrollment = _enrollments
+            .FirstOrDefault(x => x.Id == id);
 
-
-    var enrollment2 = new EnrollmentRecord(
-        "1002",
-        "ST002",
-        "CS102",
-        DateTime.UtcNow);
-
-
-    var enrollment3 = new EnrollmentRecord(
-        "1003",
-        "ST003",
-        "CS103",
-        DateTime.UtcNow);
-
-
-
-    _store[enrollment1.Id] = enrollment1;
-    _store[enrollment2.Id] = enrollment2;
-    _store[enrollment3.Id] = enrollment3;
-}
-
+        return Task.FromResult(enrollment);
+    }
 
 
     public Task<EnrollmentRecord> EnrollAsync(
         string studentId,
         string courseCode)
     {
-
-        var id = Guid.NewGuid()
-            .ToString("N")[..8];
-
-
-        var record = new EnrollmentRecord(
-            id,
+        var enrollment = new EnrollmentRecord(
+            Guid.NewGuid().ToString(),
             studentId,
             courseCode,
-            DateTime.UtcNow);
+            System.DateTime.UtcNow);
 
+        _enrollments.Add(enrollment);
 
-        _store[id] = record;
-
-
-        _logger.LogInformation(
-            "Student {StudentId} enrolled in {CourseCode} with ID {EnrollmentId}",
-            studentId,
-            courseCode,
-            id);
-
-
-        return Task.FromResult(record);
+        return Task.FromResult(enrollment);
     }
-
-
-
-    public Task<EnrollmentRecord?> GetByIdAsync(string id)
-    {
-        _store.TryGetValue(id, out var record);
-
-        return Task.FromResult(record);
-    }
-
-
-
-    public Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync()
-    {
-        IReadOnlyList<EnrollmentRecord> result =
-            _store.Values.ToList();
-
-
-        return Task.FromResult(result);
-    }
-
 
 
     public Task<bool> DeleteAsync(string id)
     {
-        var removed = _store.Remove(id);
+        var enrollment = _enrollments
+            .FirstOrDefault(x => x.Id == id);
 
-        return Task.FromResult(removed);
+        if (enrollment == null)
+            return Task.FromResult(false);
+
+        _enrollments.Remove(enrollment);
+
+        return Task.FromResult(true);
     }
 
-    public Task<object?> EnrollAsync(object studentId, object courseCode)
+    public Task EnrollAsync(object studentId, object courseCode)
     {
         throw new NotImplementedException();
     }
 }
+
+
+public class TmsDatabaseException(string message) : Exception(message);

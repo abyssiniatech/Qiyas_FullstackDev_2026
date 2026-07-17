@@ -7,12 +7,16 @@ C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsAp
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsApi.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\TmsApi.pdb
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.AspNetCore.OpenApi.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.Bcl.Cryptography.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Abstractions.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.JsonWebTokens.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Logging.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Microsoft.OpenApi.dll
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\Scalar.AspNetCore.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.csproj.AssemblyReference.cache
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rpswa.dswa.cache.json
@@ -20,6 +24,7 @@ C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsAp
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.AssemblyInfoInputs.cache
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.AssemblyInfo.cs
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.csproj.CoreCompileInputs.cache
+C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.MvcApplicationPartsAssemblyInfo.cache
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\TmsApi.sourcelink.json
 C:\Users\BM COMPUTER\Desktop\Qiyas_fullstack_2026\TmsApi\obj\Debug\net10.0\rjimswa.dswa.cache.json
