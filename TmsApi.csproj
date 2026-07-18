@@ -16,21 +16,15 @@
   <ItemGroup>
 
     <!-- Authentication -->
-    <PackageReference 
-      Include="Microsoft.AspNetCore.Authentication.JwtBearer" 
-      Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
 
 
     <!-- OpenAPI support -->
-    <PackageReference 
-      Include="Microsoft.AspNetCore.OpenApi" 
-      Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
 
 
     <!-- Entity Framework Core -->
-    <PackageReference 
-      Include="Microsoft.EntityFrameworkCore.Design" 
-      Version="10.0.10">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       
       <PrivateAssets>all</PrivateAssets>
 
@@ -46,9 +40,7 @@
     </PackageReference>
 
 
-    <PackageReference 
-      Include="Microsoft.EntityFrameworkCore.Tools" 
-      Version="10.0.10">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
 
       <PrivateAssets>all</PrivateAssets>
 
@@ -66,16 +58,12 @@
 
 
     <!-- PostgreSQL EF Core Provider -->
-    <PackageReference 
-      Include="Npgsql.EntityFrameworkCore.PostgreSQL" 
-      Version="10.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
 
 
 
     <!-- Scalar API Documentation -->
-    <PackageReference 
-      Include="Scalar.AspNetCore" 
-      Version="2.16.15" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.15" />
 
   </ItemGroup>
 
