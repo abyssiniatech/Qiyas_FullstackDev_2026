@@ -40,6 +40,38 @@ namespace TmsApi.Migrations
                     b.ToTable("Assessments");
                 });
 
+            modelBuilder.Entity("Enrollment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EnrolledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EnrollmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Grade")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("Enrollments");
+                });
+
             modelBuilder.Entity("TmsApi.Entities.Certificate", b =>
                 {
                     b.Property<int>("Id")
@@ -85,42 +117,21 @@ namespace TmsApi.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Title")
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("MaxCapacity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
                     b.HasKey("Id");
 
                     b.ToTable("Courses");
-                });
-
-            modelBuilder.Entity("TmsApi.Entities.Enrollment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("EnrolleAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Grade")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("StudentId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("StudentId");
-
-                    b.ToTable("Enrollments");
                 });
 
             modelBuilder.Entity("TmsApi.Entities.Student", b =>
@@ -131,6 +142,10 @@ namespace TmsApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("GPA")
                         .HasColumnType("numeric");
 
@@ -139,7 +154,8 @@ namespace TmsApi.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RegistrationNumber")
                         .IsRequired()
@@ -153,7 +169,7 @@ namespace TmsApi.Migrations
             modelBuilder.Entity("Assessment", b =>
                 {
                     b.HasOne("TmsApi.Entities.Course", "Course")
-                        .WithMany("Assessments")
+                        .WithMany()
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -161,18 +177,18 @@ namespace TmsApi.Migrations
                     b.Navigation("Course");
                 });
 
-            modelBuilder.Entity("TmsApi.Entities.Certificate", b =>
+            modelBuilder.Entity("Enrollment", b =>
                 {
                     b.HasOne("TmsApi.Entities.Course", "Course")
-                        .WithMany("Certificates")
+                        .WithMany("Enrollments")
                         .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TmsApi.Entities.Student", "Student")
-                        .WithMany("Certificates")
+                        .WithMany("Enrollments")
                         .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Course");
@@ -180,16 +196,16 @@ namespace TmsApi.Migrations
                     b.Navigation("Student");
                 });
 
-            modelBuilder.Entity("TmsApi.Entities.Enrollment", b =>
+            modelBuilder.Entity("TmsApi.Entities.Certificate", b =>
                 {
                     b.HasOne("TmsApi.Entities.Course", "Course")
-                        .WithMany("Enrollments")
+                        .WithMany()
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("TmsApi.Entities.Student", "Student")
-                        .WithMany("Enrollments")
+                        .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -201,17 +217,11 @@ namespace TmsApi.Migrations
 
             modelBuilder.Entity("TmsApi.Entities.Course", b =>
                 {
-                    b.Navigation("Assessments");
-
-                    b.Navigation("Certificates");
-
                     b.Navigation("Enrollments");
                 });
 
             modelBuilder.Entity("TmsApi.Entities.Student", b =>
                 {
-                    b.Navigation("Certificates");
-
                     b.Navigation("Enrollments");
                 });
 #pragma warning restore 612, 618

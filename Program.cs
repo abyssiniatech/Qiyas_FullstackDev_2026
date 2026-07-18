@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
 using TmsApi.Data;
 using TmsApi.Entities;
 using TmsApi.Middleware;
 
+
+// =============================
+// BUILDER
+// =============================
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,28 +50,6 @@ var app = builder.Build();
 
 
 // =============================
-// MIDDLEWARE PIPELINE
-// =============================
-
-app.UseMiddleware<CorrelationIdMiddleware>();
-
-
-app.UseHttpsRedirection();
-
-
-
-app.MapOpenApi();
-
-app.MapScalarApiReference();
-
-
-
-app.MapControllers();
-
-
-
-
-// =============================
 // DATABASE MIGRATION + SEED
 // =============================
 
@@ -76,11 +59,32 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<TmsDbContext>();
 
 
+    // Apply EF Core migrations automatically
     await context.Database.MigrateAsync();
 
 
+    // Insert initial data
     await SeedDatabase(context);
 }
+
+
+
+// =============================
+// MIDDLEWARE PIPELINE
+// =============================
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+
+
+app.UseHttpsRedirection();
+
+
+app.MapOpenApi();
+
+app.MapScalarApiReference();
+
+
+app.MapControllers();
 
 
 
@@ -89,6 +93,7 @@ using (var scope = app.Services.CreateScope())
 // =============================
 
 app.Run();
+
 
 
 
@@ -140,7 +145,6 @@ static async Task SeedDatabase(TmsDbContext context)
         await context.Students.AddRangeAsync(students);
 
         await context.SaveChangesAsync();
-
     }
 
 
@@ -179,6 +183,7 @@ static async Task SeedDatabase(TmsDbContext context)
 
 
 
+
     // =============================
     // ENROLLMENTS
     // =============================
@@ -186,19 +191,14 @@ static async Task SeedDatabase(TmsDbContext context)
     if (!await context.Enrollments.AnyAsync())
     {
 
-        var student1 = await context.Students
-            .FirstAsync();
-
+        var student1 = await context.Students.FirstAsync();
 
         var student2 = await context.Students
             .Skip(1)
             .FirstAsync();
 
 
-
-        var course1 = await context.Courses
-            .FirstAsync();
-
+        var course1 = await context.Courses.FirstAsync();
 
         var course2 = await context.Courses
             .Skip(1)

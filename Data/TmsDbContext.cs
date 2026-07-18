@@ -3,23 +3,20 @@ using TmsApi.Entities;
 
 namespace TmsApi.Data;
 
-public class TmsDbContext : DbContext
+public class TmsDbContext(DbContextOptions<TmsDbContext> options) : DbContext(options)
 {
-    public TmsDbContext(DbContextOptions<TmsDbContext> options)
-        : base(options)
-    {
-    }
 
 
-    public DbSet<Student> Students { get; set; }
+    // Database Tables
+    public DbSet<Student> Students { get; set; } = null!;
 
-    public DbSet<Course> Courses { get; set; }
+    public DbSet<Course> Courses { get; set; } = null!;
 
-    public DbSet<Enrollment> Enrollments { get; set; }
+    public DbSet<Enrollment> Enrollments { get; set; } = null!;
 
-    public DbSet<Assessment> Assessments { get; set; }
+    public DbSet<Assessment> Assessments { get; set; } = null!;
 
-    public DbSet<Certificate> Certificates { get; set; }
+    public DbSet<Certificate> Certificates { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,16 +24,8 @@ public class TmsDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
 
-        // Optional relationship configuration
-        modelBuilder.Entity<Enrollment>()
-            .HasOne(e => e.Student)
-            .WithMany(s => s.Enrollments)
-            .HasForeignKey(e => e.StudentId);
-
-
-        modelBuilder.Entity<Enrollment>()
-            .HasOne(e => e.Course)
-            .WithMany(c => c.Enrollments)
-            .HasForeignKey(e => e.CourseId);
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(TmsDbContext).Assembly
+        );
     }
 }
