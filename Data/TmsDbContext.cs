@@ -10,13 +10,33 @@ public class TmsDbContext : DbContext
     {
     }
 
-    public DbSet<Student> Students => Set<Student>();
 
-    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<Student> Students { get; set; }
 
-    public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+    public DbSet<Course> Courses { get; set; }
 
-    public DbSet<Assessment> Assessments => Set<Assessment>();
+    public DbSet<Enrollment> Enrollments { get; set; }
 
-    public DbSet<Certificate> Certificates => Set<Certificate>();
+    public DbSet<Assessment> Assessments { get; set; }
+
+    public DbSet<Certificate> Certificates { get; set; }
+
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+
+        // Optional relationship configuration
+        modelBuilder.Entity<Enrollment>()
+            .HasOne(e => e.Student)
+            .WithMany(s => s.Enrollments)
+            .HasForeignKey(e => e.StudentId);
+
+
+        modelBuilder.Entity<Enrollment>()
+            .HasOne(e => e.Course)
+            .WithMany(c => c.Enrollments)
+            .HasForeignKey(e => e.CourseId);
+    }
 }

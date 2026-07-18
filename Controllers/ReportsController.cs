@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TmsApi.Data;
-using TmsApi.Entities;
-using TmsApi.Models;
 
 namespace TmsApi.Controllers;
 
@@ -18,7 +16,7 @@ public class ReportsController : ControllerBase
     }
 
 
-
+    // 1. How many active students have GPA >= 3.0?
     [HttpGet("active-students-count")]
     public async Task<IActionResult> GetActiveStudentsCount()
     {
@@ -28,6 +26,9 @@ public class ReportsController : ControllerBase
 
         return Ok(count);
     }
+
+
+    // 2. Which courses have the most enrollments?
     [HttpGet("courses-by-enrollment")]
     public async Task<IActionResult> CoursesByEnrollment()
     {
@@ -35,7 +36,7 @@ public class ReportsController : ControllerBase
             .Select(c => new
             {
                 c.Title,
-                EnrollmentCount = c.Enrollments.Count
+                EnrollmentCount = c.Enrollments.Count()
             })
             .OrderByDescending(x => x.EnrollmentCount)
             .ToListAsync();
@@ -43,10 +44,12 @@ public class ReportsController : ControllerBase
         return Ok(list);
     }
 
+
+    // 3. Average GPA per course
     [HttpGet("average-gpa")]
     public async Task<IActionResult> AverageGpa()
     {
-        var list = await context.Set<Enrollment>()
+        var list = await context.Enrollments
             .GroupBy(e => e.Course.Title)
             .Select(g => new
             {
@@ -57,6 +60,9 @@ public class ReportsController : ControllerBase
 
         return Ok(list);
     }
+
+
+    // 4A. Students with zero enrollments (NOT EXISTS)
     [HttpGet("students-without-enrollments")]
     public async Task<IActionResult> StudentsWithoutEnrollments()
     {
@@ -68,25 +74,32 @@ public class ReportsController : ControllerBase
         return Ok(list);
     }
 
+
+    // 4B. Students with zero enrollments (LEFT JOIN)
     [HttpGet("students-without-enrollments-leftjoin")]
     public async Task<IActionResult> StudentsWithoutEnrollmentsLeftJoin()
     {
-        var enrollments = context.Set<Enrollment>();
-
         var list = await context.Students
             .GroupJoin(
-                enrollments,
-                s => s.Id,
-                e => e.StudentId,
-                (s, es) => new { s, es })
-            .SelectMany(x => x.es.DefaultIfEmpty(), (x, e) => new { s = x.s, e })
-            .Where(x => x.e == null)
-            .Select(x => x.s.Name)
+                context.Enrollments,
+                student => student.Id,
+                enrollment => enrollment.StudentId,
+                (student, enrollments) => new
+                {
+                    student,
+                    enrollments
+                })
+            .SelectMany(
+                x => x.enrollments.DefaultIfEmpty(),
+                (x, enrollment) => new
+                {
+                    x.student,
+                    enrollment
+                })
+            .Where(x => x.enrollment == null)
+            .Select(x => x.student.Name)
             .ToListAsync();
 
         return Ok(list);
     }
-
 }
-
-

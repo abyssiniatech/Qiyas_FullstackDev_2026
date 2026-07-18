@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TmsApi.Data;
@@ -11,9 +12,11 @@ using TmsApi.Data;
 namespace TmsApi.Migrations
 {
     [DbContext(typeof(TmsDbContext))]
-    partial class TmsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718083908_FixAssessmentCourseRelationship")]
+    partial class FixAssessmentCourseRelationship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,7 +25,7 @@ namespace TmsApi.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Assessment", b =>
+            modelBuilder.Entity("TmsApi.Entities.Assessment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,12 +33,25 @@ namespace TmsApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CourseId")
+                    b.Property<decimal>("CourseId")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("CourseId1")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("weight")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("CourseId1");
 
                     b.ToTable("Assessments");
                 });
@@ -150,11 +166,11 @@ namespace TmsApi.Migrations
                     b.ToTable("Students");
                 });
 
-            modelBuilder.Entity("Assessment", b =>
+            modelBuilder.Entity("TmsApi.Entities.Assessment", b =>
                 {
                     b.HasOne("TmsApi.Entities.Course", "Course")
                         .WithMany("Assessments")
-                        .HasForeignKey("CourseId")
+                        .HasForeignKey("CourseId1")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -43,27 +43,31 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 
+
 // =============================
 // MIDDLEWARE PIPELINE
 // =============================
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 
+
 app.UseHttpsRedirection();
 
 
-// API documentation
+
 app.MapOpenApi();
 
 app.MapScalarApiReference();
+
 
 
 app.MapControllers();
 
 
 
+
 // =============================
-// DATABASE INITIALIZATION
+// DATABASE MIGRATION + SEED
 // =============================
 
 using (var scope = app.Services.CreateScope())
@@ -72,18 +76,16 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<TmsDbContext>();
 
 
-    // Apply migrations
-    context.Database.Migrate();
+    await context.Database.MigrateAsync();
 
 
-    // Seed only empty database
-    SeedDatabase(context);
+    await SeedDatabase(context);
 }
 
 
 
 // =============================
-// START APPLICATION
+// RUN APPLICATION
 // =============================
 
 app.Run();
@@ -91,98 +93,142 @@ app.Run();
 
 
 
-
 // =============================
-// SEED METHOD
+// DATABASE SEED METHOD
 // =============================
 
-static void SeedDatabase(TmsDbContext context)
+static async Task SeedDatabase(TmsDbContext context)
 {
 
-    if (context.Students.Any())
+    // =============================
+    // STUDENTS
+    // =============================
+
+    if (!await context.Students.AnyAsync())
     {
-        return;
+
+        var students = new List<Student>
+        {
+            new()
+            {
+                Name = "Surafel Mengist",
+                RegistrationNumber = "TMS-2026-0001",
+                GPA = 3.8m,
+                IsActive = true
+            },
+
+
+            new()
+            {
+                Name = "Student Two",
+                RegistrationNumber = "TMS-2026-0002",
+                GPA = 2.9m,
+                IsActive = true
+            },
+
+
+            new()
+            {
+                Name = "Henoke Ketema",
+                RegistrationNumber = "TMS-2026-0003",
+                GPA = 3.4m,
+                IsActive = false
+            }
+        };
+
+
+        await context.Students.AddRangeAsync(students);
+
+        await context.SaveChangesAsync();
+
     }
 
 
 
-    var students = new List<Student>
+    // =============================
+    // COURSES
+    // =============================
+
+    if (!await context.Courses.AnyAsync())
     {
-        new()
+
+        var courses = new List<Course>
         {
-            Name = "Student One",
-            RegistrationNumber = "TMS-2026-0001",
-            GPA = 3.8m,
-            IsActive = true
-        },
-
-        new()
-        {
-            Name = "Student Two",
-            RegistrationNumber = "TMS-2026-0002",
-            GPA = 2.9m,
-            IsActive = true
-        },
-
-        new()
-        {
-            Name = "Student Three",
-            RegistrationNumber = "TMS-2026-0003",
-            GPA = 3.4m,
-            IsActive = false
-        }
-    };
+            new()
+            {
+                Code = "CS-101",
+                Title = "Introduction to Computer Science",
+                Capacity = 30
+            },
 
 
-    context.Students.AddRange(students);
+            new()
+            {
+                Code = "CS-201",
+                Title = "Data Structures and Algorithms",
+                Capacity = 25
+            }
+        };
 
-    context.SaveChanges();
+
+        await context.Courses.AddRangeAsync(courses);
+
+        await context.SaveChangesAsync();
+
+    }
 
 
 
-    var courses = new List<Course>
+    // =============================
+    // ENROLLMENTS
+    // =============================
+
+    if (!await context.Enrollments.AnyAsync())
     {
-        new()
+
+        var student1 = await context.Students
+            .FirstAsync();
+
+
+        var student2 = await context.Students
+            .Skip(1)
+            .FirstAsync();
+
+
+
+        var course1 = await context.Courses
+            .FirstAsync();
+
+
+        var course2 = await context.Courses
+            .Skip(1)
+            .FirstAsync();
+
+
+
+        var enrollments = new List<Enrollment>
         {
-            Code="CS-101",
-            Title="Introduction to Computer Science",
-            Capacity=30
-        },
-
-        new()
-        {
-            Code="CS-201",
-            Title="Data Structures and Algorithms",
-            Capacity=25
-        }
-    };
+            new()
+            {
+                StudentId = student1.Id,
+                CourseId = course1.Id,
+                Grade = 4.0m
+            },
 
 
-    context.Courses.AddRange(courses);
-
-    context.SaveChanges();
-
-
-
-    var enrollments = new List<Enrollment>
-    {
-        new()
-        {
-            StudentId=students[0].Id,
-            CourseId=courses[0].Id,
-            Grade=4.0m
-        },
-
-        new()
-        {
-            StudentId=students[1].Id,
-            CourseId=courses[1].Id,
-            Grade=3.5m
-        }
-    };
+            new()
+            {
+                StudentId = student2.Id,
+                CourseId = course2.Id,
+                Grade = 3.5m
+            }
+        };
 
 
-    context.Enrollments.AddRange(enrollments);
+        await context.Enrollments.AddRangeAsync(enrollments);
 
-    context.SaveChanges();
+        await context.SaveChangesAsync();
+
+    }
+
 }
