@@ -1,3 +1,4 @@
+using TmsApi.Data;
 using TmsApi.Models;
 
 namespace TmsApi.Entities;
@@ -10,5 +11,6 @@ public class Student
     public bool IsActive { get; set; } = true;
     public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
     public required string Name { get; set; }
+    public ICollection<Certificate> Certificates { get; set; } = [];
 }
 
