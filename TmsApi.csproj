@@ -2,8 +2,82 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+
     <Nullable>enable</Nullable>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <RootNamespace>TmsApi</RootNamespace>
+
+    <AssemblyName>TmsApi</AssemblyName>
   </PropertyGroup>
+
+
+  <ItemGroup>
+
+    <!-- Authentication -->
+    <PackageReference 
+      Include="Microsoft.AspNetCore.Authentication.JwtBearer" 
+      Version="10.0.10" />
+
+
+    <!-- OpenAPI support -->
+    <PackageReference 
+      Include="Microsoft.AspNetCore.OpenApi" 
+      Version="10.0.10" />
+
+
+    <!-- Entity Framework Core -->
+    <PackageReference 
+      Include="Microsoft.EntityFrameworkCore.Design" 
+      Version="10.0.10">
+      
+      <PrivateAssets>all</PrivateAssets>
+
+      <IncludeAssets>
+        runtime; 
+        build; 
+        native; 
+        contentfiles; 
+        analyzers; 
+        buildtransitive
+      </IncludeAssets>
+
+    </PackageReference>
+
+
+    <PackageReference 
+      Include="Microsoft.EntityFrameworkCore.Tools" 
+      Version="10.0.10">
+
+      <PrivateAssets>all</PrivateAssets>
+
+      <IncludeAssets>
+        runtime; 
+        build; 
+        native; 
+        contentfiles; 
+        analyzers; 
+        buildtransitive
+      </IncludeAssets>
+
+    </PackageReference>
+
+
+
+    <!-- PostgreSQL EF Core Provider -->
+    <PackageReference 
+      Include="Npgsql.EntityFrameworkCore.PostgreSQL" 
+      Version="10.0.3" />
+
+
+
+    <!-- Scalar API Documentation -->
+    <PackageReference 
+      Include="Scalar.AspNetCore" 
+      Version="2.16.15" />
+
+  </ItemGroup>
+
 
 </Project>
