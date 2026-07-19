@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
+using Tms.Api.Dtos;
 using Tms.Api.Services;
 using Tms.Dtos;
 using TmsApi.DTOs;
@@ -31,7 +33,14 @@ public class CoursesController : ControllerBase
             : NotFound();
     }
 
-
+    [HttpGet]
+    public async Task<IActionResult> GetCourses(
+  [FromQuery] PagedRequest request, CancellationToken ct)
+    {
+        var courseService = (dynamic)_courseService;
+        var result = await courseService.GetAsync(request, ct);
+        return Ok(result);
+    }
 
     // POST: api/courses
     [HttpPost]

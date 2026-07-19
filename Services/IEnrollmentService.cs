@@ -1,16 +1,16 @@
-using TmsApi.Models;
+using Tms.Dtos;
 
 namespace TmsApi.Services;
 
 public interface IEnrollmentService
 {
-    Task<EnrollmentRecord> EnrollAsync(
-        string studentId,
-        string courseCode);
+    Task<EnrollmentResponseDto> CreateAsync(
+        int courseId,
+        CreateEnrollmentRequest request,
+        CancellationToken ct);
 
-    Task<EnrollmentRecord?> GetByIdAsync(string id);
 
-    Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync();
-
-    Task<bool> DeleteAsync(string id);
+    Task<EnrollmentResponseDto?> GetByIdAsync(
+        int id,
+        CancellationToken ct);
 }

@@ -4,14 +4,13 @@ public class Course
 {
     public int Id { get; set; }
 
+    public string Code { get; set; } = string.Empty;
 
-    public required string Code { get; set; }
- 
+    public string Title { get; set; } = string.Empty;
 
-    public required string Title { get; set; }
+    public int MaxCapacity { get; set; }
 
 
-    public  int MaxCapacity { get; set; } 
-
-    public ICollection<Enrollment> Enrollments { get; set; } =[];
+    public ICollection<Enrollment> Enrollments { get; set; }
+        = new List<Enrollment>();
 }

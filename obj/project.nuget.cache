@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "21vbh9l6zWg=",
+  "dgSpecHash": "e3XUwiFJYCY=",
   "success": true,
-  "projectFilePath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\TmsApi.csproj",
+  "projectFilePath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\TmsApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\BM COMPUTER\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\BM COMPUTER\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.10\\microsoft.aspnetcore.authentication.jwtbearer.10.0.10.nupkg.sha512",
@@ -49,9 +49,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
-      "projectPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\TmsApi.csproj",
+      "projectPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\TmsApi.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\TmsApi.csproj",
+      "filePath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\TmsApi.csproj",
       "libraryId": "Microsoft.OpenApi",
       "targetGraphs": [
         "net10.0"

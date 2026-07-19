@@ -36,11 +36,11 @@ public class StudentService
             .AsNoTracking()
             .Select(s => new StudentEnrollmentReportDto
             {
-                Name = s.Name,
+                Name = (string)(s.Name ?? string.Empty),
                 EnrollmentCount = s.Enrollments.Count
             })
             .ToListAsync(cancellationToken);
     }
 
-    
+
 }

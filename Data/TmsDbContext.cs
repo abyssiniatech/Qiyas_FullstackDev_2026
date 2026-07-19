@@ -1,31 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using TmsApi.Entities;
 
-namespace TmsApi.Data;
-
-public class TmsDbContext(DbContextOptions<TmsDbContext> options) : DbContext(options)
+namespace TmsApi.Data
 {
-
-
-    // Database Tables
-    public DbSet<Student> Students { get; set; } = null!;
-
-    public DbSet<Course> Courses { get; set; } = null!;
-
-    public DbSet<Enrollment> Enrollments { get; set; } = null!;
-
-    public DbSet<Assessment> Assessments { get; set; } = null!;
-
-    public DbSet<Certificate> Certificates { get; set; } = null!;
-
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class TmsDbContext : DbContext
     {
-        base.OnModelCreating(modelBuilder);
+        public TmsDbContext(DbContextOptions<TmsDbContext> options)
+            : base(options)
+        {
+        }
 
-
-        modelBuilder.ApplyConfigurationsFromAssembly(
-            typeof(TmsDbContext).Assembly
-        );
+        public DbSet<Student> Students { get; set; }
+        public DbSet<Enrollment> Enrollments { get; set; }
+        public DbSet<Course> Courses { get; set; }
     }
 }

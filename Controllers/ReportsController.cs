@@ -15,8 +15,7 @@ public class ReportsController : ControllerBase
         this.context = context;
     }
 
-
-    // 1. How many active students have GPA >= 3.0?
+    // 1. Active students GPA >= 3.0
     [HttpGet("active-students-count")]
     public async Task<IActionResult> GetActiveStudentsCount()
     {
@@ -24,11 +23,13 @@ public class ReportsController : ControllerBase
             .Where(s => s.IsActive && s.GPA >= 3.0m)
             .CountAsync();
 
-        return Ok(count);
+        return Ok(new
+        {
+            ActiveStudentsCount = count
+        });
     }
 
-
-    // 2. Which courses have the most enrollments?
+    // 2. Courses with enrollment count
     [HttpGet("courses-by-enrollment")]
     public async Task<IActionResult> CoursesByEnrollment()
     {
@@ -43,7 +44,6 @@ public class ReportsController : ControllerBase
 
         return Ok(list);
     }
-
 
     // 3. Average GPA per course
     [HttpGet("average-gpa")]
@@ -61,8 +61,7 @@ public class ReportsController : ControllerBase
         return Ok(list);
     }
 
-
-    // 4A. Students with zero enrollments (NOT EXISTS)
+    // 4A. NOT EXISTS query
     [HttpGet("students-without-enrollments")]
     public async Task<IActionResult> StudentsWithoutEnrollments()
     {
@@ -74,31 +73,18 @@ public class ReportsController : ControllerBase
         return Ok(list);
     }
 
-
-    // 4B. Students with zero enrollments (LEFT JOIN)
+    // 4B. LEFT JOIN query
     [HttpGet("students-without-enrollments-leftjoin")]
     public async Task<IActionResult> StudentsWithoutEnrollmentsLeftJoin()
     {
-        var list = await context.Students
-            .GroupJoin(
-                context.Enrollments,
-                student => student.Id,
-                enrollment => enrollment.StudentId,
-                (student, enrollments) => new
-                {
-                    student,
-                    enrollments
-                })
-            .SelectMany(
-                x => x.enrollments.DefaultIfEmpty(),
-                (x, enrollment) => new
-                {
-                    x.student,
-                    enrollment
-                })
-            .Where(x => x.enrollment == null)
-            .Select(x => x.student.Name)
-            .ToListAsync();
+        var list = await (
+            from student in context.Students
+            join enrollment in context.Enrollments
+                on student.Id equals enrollment.StudentId into enrollments
+            from enrollment in enrollments.DefaultIfEmpty()
+            where enrollment == null
+            select student.Name
+        ).ToListAsync();
 
         return Ok(list);
     }
