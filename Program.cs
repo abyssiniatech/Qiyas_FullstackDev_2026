@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
+using Tms.Api.Persistence;
 using Tms.Api.Services;
+using Tms.Api.Filters;
 using TmsApi.Data;
 using TmsApi.Services;
 
@@ -22,15 +24,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 
 
-// Controllers
-builder.Services.AddControllers();
+// Controllers + Global Audit Filter
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<AuditLogFilter>();
+});
+
+
+
+// =============================
+// DATABASE
+// =============================
 
 
 // EF Core PostgreSQL
+
 builder.Services.AddDbContext<TmsDbContext>(options =>
 {
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("TmsDatabase")
+        builder.Configuration
+        .GetConnectionString("TmsDatabase")
     );
 
 
@@ -46,17 +59,23 @@ builder.Services.AddDbContext<TmsDbContext>(options =>
 });
 
 
+
 // =============================
 // APPLICATION SERVICES
 // =============================
 
 
 // Course Service
-builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<
+    ICourseService,
+    CourseService>();
 
 
-// Future Module 7 services
-// builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
+// Enrollment Service
+builder.Services.AddScoped<
+    IEnrollmentService,
+    EnrollmentService>();
+
 
 
 // =============================
@@ -76,19 +95,40 @@ var app = builder.Build();
 
 
 // =============================
+// DATABASE SEEDER
+// =============================
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+
+    var context =
+        scope.ServiceProvider
+        .GetRequiredService<TmsDbContext>();
+
+
+    await DataSeeder.SeedAsync(context);
+}
+
+
+
+// =============================
 // HTTP PIPELINE
 // =============================
 
 
 // Global exception handling
+
 app.UseExceptionHandler();
 
 
 // HTTPS
+
 app.UseHttpsRedirection();
 
 
 // Status code handling
+
 app.UseStatusCodePages();
 
 
@@ -111,10 +151,12 @@ if (app.Environment.IsDevelopment())
 
 
 // =============================
-// AUTHENTICATION / AUTHORIZATION
+// AUTHORIZATION
 // =============================
 
-// Add Authentication here later
+
+// Authentication will come later
+
 // app.UseAuthentication();
 
 

@@ -1,6 +1,9 @@
-using Tms.Dtos;
 
-namespace Tms.Api.Services;
+using Tms.Api.Dtos;
+using Tms.Dtos;
+using TmsApi.DTOs;
+
+namespace TmsApi.Services;
 
 public interface ICourseService
 {
@@ -8,9 +11,16 @@ public interface ICourseService
         int id,
         CancellationToken ct);
 
-
     Task<CourseResponseDto> CreateAsync(
         CreateCourseRequest request,
         CancellationToken ct);
-}
 
+    Task<bool> CodeExistsAsync(
+        string code,
+        CancellationToken ct);
+
+
+    Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
+        PagedRequest request,
+        CancellationToken ct);
+}
