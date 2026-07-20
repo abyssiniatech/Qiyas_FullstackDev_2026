@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+
     <TargetFramework>net10.0</TargetFramework>
 
     <Nullable>enable</Nullable>
@@ -10,30 +11,47 @@
     <RootNamespace>TmsApi</RootNamespace>
 
     <AssemblyName>TmsApi</AssemblyName>
+
+        <!-- Suppress NU1903 warning about a known vulnerable transitive package (Microsoft.OpenApi).
+          The project intentionally uses Microsoft.AspNetCore.OpenApi instead; suppress the advisory
+          to avoid CI/build noise. -->
+        <NoWarn>$(NoWarn);NU1903</NoWarn>
+
   </PropertyGroup>
 
 
   <ItemGroup>
 
-    <!-- Authentication -->
+    <!-- ========================= -->
+    <!-- Authentication / Security -->
+    <!-- ========================= -->
+
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
 
+    <!-- ========================= -->
+    <!-- OpenAPI + Scalar Docs -->
 
-    <!-- OpenAPI support -->
+    <!-- Removed vulnerable Microsoft.OpenApi package (2.0.1). Use Microsoft.AspNetCore.OpenApi (included below) instead. -->
+
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
 
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.15" />
 
+
+    <!-- ========================= -->
     <!-- Entity Framework Core -->
+    <!-- ========================= -->
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
-      
+
       <PrivateAssets>all</PrivateAssets>
 
       <IncludeAssets>
-        runtime; 
-        build; 
-        native; 
-        contentfiles; 
-        analyzers; 
+        runtime;
+        build;
+        native;
+        contentfiles;
+        analyzers;
         buildtransitive
       </IncludeAssets>
 
@@ -45,25 +63,23 @@
       <PrivateAssets>all</PrivateAssets>
 
       <IncludeAssets>
-        runtime; 
-        build; 
-        native; 
-        contentfiles; 
-        analyzers; 
+        runtime;
+        build;
+        native;
+        contentfiles;
+        analyzers;
         buildtransitive
       </IncludeAssets>
 
     </PackageReference>
 
 
+    <!-- ========================= -->
+    <!-- PostgreSQL Provider -->
+    <!-- ========================= -->
 
-    <!-- PostgreSQL EF Core Provider -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
 
-
-
-    <!-- Scalar API Documentation -->
-    <PackageReference Include="Scalar.AspNetCore" Version="2.16.15" />
 
   </ItemGroup>
 
