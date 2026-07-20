@@ -2665,11 +2665,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\TmsApi.csproj",
+      "projectUniqueName": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\TmsApi.csproj",
       "projectName": "TmsApi",
-      "projectPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\TmsApi.csproj",
+      "projectPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\TmsApi.csproj",
       "packagesPath": "C:\\Users\\BM COMPUTER\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\Tmsapi\\obj\\",
+      "outputPath": "C:\\Users\\BM COMPUTER\\Desktop\\Qiyas_fullstack_2026\\TmsApi\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\BM COMPUTER\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -225,4 +225,9 @@ public class CourseService : ICourseService
             PageSize = request.PageSize
         };
     }
+
+    public Task GetAsync(PagedRequest request, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
 }

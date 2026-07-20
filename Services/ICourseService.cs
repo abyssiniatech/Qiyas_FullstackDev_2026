@@ -23,4 +23,5 @@ public interface ICourseService
     Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
         PagedRequest request,
         CancellationToken ct);
+    Task GetAsync(PagedRequest request, CancellationToken ct);
 }

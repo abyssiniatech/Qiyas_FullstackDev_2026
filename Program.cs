@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
+
+using Tms.Api.Filters;
 using Tms.Api.Persistence;
 using Tms.Api.Services;
-using Tms.Api.Filters;
+
 using TmsApi.Data;
 using TmsApi.Services;
 
@@ -20,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // =============================
 
 
-// Problem Details for API errors
+// API Error Handling
 builder.Services.AddProblemDetails();
 
 
@@ -28,6 +30,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<AuditLogFilter>();
+
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler =
+        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
 
@@ -37,25 +45,23 @@ builder.Services.AddControllers(options =>
 // =============================
 
 
-// EF Core PostgreSQL
-
 builder.Services.AddDbContext<TmsDbContext>(options =>
 {
     options.UseNpgsql(
         builder.Configuration
-        .GetConnectionString("TmsDatabase")
+            .GetConnectionString("TmsDatabase")
     );
 
 
-    // Development only
-    options.EnableSensitiveDataLogging();
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
 
-
-    // SQL query logging
-    options.LogTo(
-        Console.WriteLine,
-        LogLevel.Information
-    );
+        options.LogTo(
+            Console.WriteLine,
+            LogLevel.Information
+        );
+    }
 });
 
 
@@ -65,16 +71,9 @@ builder.Services.AddDbContext<TmsDbContext>(options =>
 // =============================
 
 
-// Course Service
-builder.Services.AddScoped<
-    ICourseService,
-    CourseService>();
+builder.Services.AddScoped<ICourseService, CourseService>();
 
-
-// Enrollment Service
-builder.Services.AddScoped<
-    IEnrollmentService,
-    EnrollmentService>();
+builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
 
 
@@ -82,7 +81,8 @@ builder.Services.AddScoped<
 // OPENAPI
 // =============================
 
-builder.Services.AddOpenApi();
+
+builder.Services.AddOpenApi("v1");
 
 
 
@@ -90,7 +90,20 @@ builder.Services.AddOpenApi();
 // BUILD APPLICATION
 // =============================
 
+
 var app = builder.Build();
+
+
+
+// =============================
+// DEVELOPMENT
+// =============================
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
 
 
 
@@ -98,13 +111,14 @@ var app = builder.Build();
 // DATABASE SEEDER
 // =============================
 
+
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
 
     var context =
         scope.ServiceProvider
-        .GetRequiredService<TmsDbContext>();
+            .GetRequiredService<TmsDbContext>();
 
 
     await DataSeeder.SeedAsync(context);
@@ -117,18 +131,15 @@ if (app.Environment.IsDevelopment())
 // =============================
 
 
-// Global exception handling
-
+// Exception handling FIRST
 app.UseExceptionHandler();
 
 
 // HTTPS
-
 app.UseHttpsRedirection();
 
 
-// Status code handling
-
+// Status code pages
 app.UseStatusCodePages();
 
 
@@ -137,14 +148,18 @@ app.UseStatusCodePages();
 // OPENAPI + SCALAR
 // =============================
 
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi("/openapi/{documentName}.json");
 
 
     app.MapScalarApiReference(options =>
     {
         options.Title = "TMS API Documentation";
+
+        options.OpenApiRoutePattern =
+            "/openapi/{documentName}.json";
     });
 }
 
@@ -155,11 +170,6 @@ if (app.Environment.IsDevelopment())
 // =============================
 
 
-// Authentication will come later
-
-// app.UseAuthentication();
-
-
 app.UseAuthorization();
 
 
@@ -168,6 +178,7 @@ app.UseAuthorization();
 // CONTROLLERS
 // =============================
 
+
 app.MapControllers();
 
 
@@ -175,5 +186,6 @@ app.MapControllers();
 // =============================
 // RUN
 // =============================
+
 
 app.Run();
