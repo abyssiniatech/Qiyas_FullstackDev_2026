@@ -1,27 +1,93 @@
 
+
+// // using Tms.Api.Dtos;
+
+// // namespace TmsApi.Services;
+
+// // public interface ICourseService
+// // {
+// //     Task<IReadOnlyList<CourseDto>> GetCoursesAsync(
+// //         int page,
+// //         int pageSize,
+// //         CancellationToken ct);
+
+
+// //     Task<CourseDto?> GetCourseByIdAsync(
+// //         int id,
+// //         CancellationToken ct);
+// //     Task GetByIdAsync(int id, CancellationToken ct);
+// //     Task GetCoursesAsync(PagedRequest request, CancellationToken ct);
+// // }
+
+
+
+
+
+
+// using Tms.Api.Dtos;
+
+// namespace TmsApi.Services;
+
+
+// public interface ICourseService
+// {
+
+//     Task<IReadOnlyList<CourseDto>> GetCoursesAsync(
+//         int page,
+//         int pageSize,
+//         CancellationToken ct);
+
+
+
+//     Task<CourseDto?> GetCourseByIdAsync(
+//         int id,
+//         CancellationToken ct);
+
+// }
+
+// public class CourseDto
+// {
+//     public int MaxCapacity { get; internal set; }
+//     public string Title { get; internal set; }
+//     public string Code { get; internal set; }
+//     public int Id { get; internal set; }
+// }
+
+
 using Tms.Api.Dtos;
-using Tms.Dtos;
-using TmsApi.DTOs;
 
 namespace TmsApi.Services;
 
 public interface ICourseService
 {
-    Task<CourseResponseDto?> GetByIdAsync(
+
+    Task<IReadOnlyList<CourseDto>> GetCoursesAsync(
+        int page,
+        int pageSize,
+        CancellationToken ct);
+
+
+    Task<CourseDto?> GetCourseByIdAsync(
         int id,
         CancellationToken ct);
 
-    Task<CourseResponseDto> CreateAsync(
-        CreateCourseRequest request,
-        CancellationToken ct);
 
-    Task<bool> CodeExistsAsync(
-        string code,
+
+    Task<CourseDto> CreateCourseAsync(
+        CourseRequestDto request,
         CancellationToken ct);
 
 
-    Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
-        PagedRequest request,
+
+    Task<CourseDto?> UpdateCourseAsync(
+        int id,
+        CourseRequestDto request,
         CancellationToken ct);
-    Task GetAsync(PagedRequest request, CancellationToken ct);
+
+
+
+    Task<bool> DeleteCourseAsync(
+        int id,
+        CancellationToken ct);
+
 }

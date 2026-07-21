@@ -1,32 +1,70 @@
 using Microsoft.EntityFrameworkCore;
-using Tms.Dtos;
-using TmsApi.Data;
+using Tms.Api.Dtos;
 using TmsApi.Entities;
-using TmsApi.Exceptions;
+using TmsApi.Persistence;
 
-namespace TmsApi.Services;
-
+namespace Tms.Api.Services;
 
 public class EnrollmentService : IEnrollmentService
 {
-    private readonly TmsDbContext context;
+    private readonly AppDbContext context;
 
 
-    public EnrollmentService(
-        TmsDbContext context)
+    public EnrollmentService(AppDbContext context)
     {
-        this.context = context;
+        this.context = context 
+            ?? throw new ArgumentNullException(nameof(context));
+    }
+
+
+
+    public async Task<List<EnrollmentResponseDto>> GetByCourseAsync(
+        int courseId,
+        CancellationToken ct)
+    {
+        return await context.Enrollments
+            .AsNoTracking()
+            .Where(e => e.CourseId == courseId)
+            .Select(e => new EnrollmentResponseDto
+            {
+                Id = e.Id,
+                CourseId = e.CourseId,
+                StudentId = e.StudentId,
+                EnrolledAt = e.EnrolledAt
+            })
+            .ToListAsync(ct);
+    }
+
+
+
+    public async Task<EnrollmentResponseDto?> GetByIdAsync(
+        int courseId,
+        int id,
+        CancellationToken ct)
+    {
+        return await context.Enrollments
+            .AsNoTracking()
+            .Where(e =>
+                e.CourseId == courseId &&
+                e.Id == id)
+            .Select(e => new EnrollmentResponseDto
+            {
+                Id = e.Id,
+                CourseId = e.CourseId,
+                StudentId = e.StudentId,
+                EnrolledAt = e.EnrolledAt
+            })
+            .FirstOrDefaultAsync(ct);
     }
 
 
 
     public async Task<EnrollmentResponseDto> CreateAsync(
         int courseId,
-        CreateEnrollmentRequest request,
+        EnrollStudentRequest request,
         CancellationToken ct)
     {
-
-        // 1. Check course exists FIRST
+        // Verify course exists
         var courseExists =
             await context.Courses
                 .AnyAsync(
@@ -37,33 +75,7 @@ public class EnrollmentService : IEnrollmentService
         if (!courseExists)
         {
             throw new KeyNotFoundException(
-                "Course not found");
-        }
-
-
-
-        if (!int.TryParse(request.StudentId, out var studentId))
-        {
-            throw new ArgumentException(
-                "StudentId must be a valid integer.",
-                nameof(request.StudentId));
-        }
-
-
-        // 2. Check duplicate enrollment
-        var duplicate =
-            await context.Enrollments
-                .AnyAsync(
-                    e =>
-                    e.CourseId == courseId &&
-                    e.StudentId == studentId,
-                    ct);
-
-
-        if (duplicate)
-        {
-            throw new ConflictException(
-                "Student already enrolled in this course");
+                $"Course with id {courseId} was not found.");
         }
 
 
@@ -71,7 +83,8 @@ public class EnrollmentService : IEnrollmentService
         var enrollment = new Enrollment
         {
             CourseId = courseId,
-            StudentId = studentId
+            StudentId = request.StudentId,
+            EnrolledAt = DateTime.UtcNow
         };
 
 
@@ -81,27 +94,12 @@ public class EnrollmentService : IEnrollmentService
 
 
 
-        return new EnrollmentResponseDto(
-            enrollment.Id,
-            enrollment.CourseId,
-            enrollment.StudentId.ToString()
-        );
-    }
-
-
-
-    public async Task<EnrollmentResponseDto?> GetByIdAsync(
-        int id,
-        CancellationToken ct)
-    {
-        return await context.Enrollments
-            .AsNoTracking()
-            .Where(e => e.Id == id)
-            .Select(e => new EnrollmentResponseDto(
-                e.Id,
-                e.CourseId,
-                e.StudentId.ToString()
-            ))
-            .FirstOrDefaultAsync(ct);
+        return new EnrollmentResponseDto
+        {
+            Id = enrollment.Id,
+            CourseId = enrollment.CourseId,
+            StudentId = enrollment.StudentId,
+            EnrolledAt = enrollment.EnrolledAt
+        };
     }
 }

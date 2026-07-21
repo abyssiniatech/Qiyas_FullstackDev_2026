@@ -6,12 +6,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TmsApi.Data;
+using TmsApi.Persistence;
 
 #nullable disable
 
 namespace TmsApi.Migrations
 {
-    [DbContext(typeof(TmsDbContext))]
+    [DbContext(typeof(AppDbContext))]
     [Migration("20260719085649_RenameCapacityToMaxCapacity")]
     partial class RenameCapacityToMaxCapacity
     {

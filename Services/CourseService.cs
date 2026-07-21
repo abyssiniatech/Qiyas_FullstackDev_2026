@@ -1,233 +1,244 @@
-using Microsoft.EntityFrameworkCore;
-using TmsApi.Entities;
-using Tms.Dtos;
-using Tms.Api.Dtos;
-using TmsApi.Data;
-using TmsApi.Services;
+// using Microsoft.EntityFrameworkCore;
+// using TmsApi.Dtos;
+// using TmsApi.Persistence;
 
-namespace Tms.Api.Services;
+// namespace TmsApi.Services;
+
+
+// public class CourseService : ICourseService
+// {
+//     private readonly AppDbContext context;
+
+
+//     public CourseService(AppDbContext context)
+//     {
+//         this.context = context;
+//     }
+
+
+
+//     public async Task<IReadOnlyList<CourseDto>> GetCoursesAsync(
+//         int page,
+//         int pageSize,
+//         CancellationToken ct)
+//     {
+//         return await context.Courses
+//             .AsNoTracking()
+//             .OrderBy(c => c.Id)
+//             .Skip((page - 1) * pageSize)
+//             .Take(pageSize)
+//             .Select(c => new CourseDto
+//             {
+//                 Id = c.Id,
+//                 Code = c.Code,
+//                 Title = c.Title,
+//                 MaxCapacity = c.MaxCapacity
+//             })
+//             .ToListAsync(ct);
+//     }
+
+
+
+//     public async Task<CourseDto?> GetCourseByIdAsync(
+//         int id,
+//         CancellationToken ct)
+//     {
+//         return await context.Courses
+//             .AsNoTracking()
+//             .Where(c => c.Id == id)
+//             .Select(c => new CourseDto
+//             {
+//                 Id = c.Id,
+//                 Code = c.Code,
+//                 Title = c.Title,
+//                 MaxCapacity = c.MaxCapacity
+//             })
+//             .FirstOrDefaultAsync(ct);
+//     }
+
+// }
+
+
+using Microsoft.EntityFrameworkCore;
+using Tms.Api.Dtos;
+using TmsApi.Entities;
+using TmsApi.Persistence;
+
+
+namespace TmsApi.Services;
+
 
 public class CourseService : ICourseService
 {
-    private readonly TmsDbContext context;
+
+    private readonly AppDbContext context;
 
 
-    public CourseService(TmsDbContext context)
+    public CourseService(AppDbContext context)
     {
         this.context = context;
     }
 
 
 
-    // =====================================
-    // GET COURSE BY ID
-    // =====================================
-
-    public async Task<CourseResponseDto?> GetByIdAsync(
-        int id,
+    public async Task<IReadOnlyList<CourseDto>> GetCoursesAsync(
+        int page,
+        int pageSize,
         CancellationToken ct)
     {
+
         return await context.Courses
-            .AsNoTracking()
-            .Where(c => c.Id == id)
-            .Select(c =>
-                new CourseResponseDto(
-                    c.Id,
-                    c.Code,
-                    c.Title,
-                    c.MaxCapacity,
-                    c.Enrollments.Count
-                ))
-            .FirstOrDefaultAsync(ct);
+            .OrderBy(c => c.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(c => new CourseDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                MaxCapacity = c.MaxCapacity
+            })
+            .ToListAsync(ct);
+
     }
 
 
 
 
-    // =====================================
-    // CREATE COURSE
-    // =====================================
 
-    public async Task<CourseResponseDto> CreateAsync(
-        CreateCourseRequest request,
+    public async Task<CourseDto?> GetCourseByIdAsync(
+        int id,
         CancellationToken ct)
     {
 
+        return await context.Courses
+            .Where(c => c.Id == id)
+            .Select(c => new CourseDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                MaxCapacity = c.MaxCapacity
+            })
+            .FirstOrDefaultAsync(ct);
+
+    }
+
+
+
+
+
+    public async Task<CourseDto> CreateCourseAsync(
+        CourseRequestDto request,
+        CancellationToken ct)
+    {
+
+#pragma warning disable CS8601 // Possible null reference assignment.
         var course = new Course
         {
-            Code = request.Code,
             Title = request.Title,
+            Description = request.Description,
             MaxCapacity = request.MaxCapacity
         };
+#pragma warning restore CS8601 // Possible null reference assignment.
 
 
         context.Courses.Add(course);
+
 
         await context.SaveChangesAsync(ct);
 
 
 
-        return new CourseResponseDto(
-            course.Id,
-            course.Code,
-            course.Title,
-            course.MaxCapacity,
-            0
-        );
-    }
-
-
-
-
-
-    // =====================================
-    // CHECK COURSE CODE EXISTS
-    // =====================================
-
-    public async Task<bool> CodeExistsAsync(
-        string code,
-        CancellationToken ct)
-    {
-        return await context.Courses
-            .AnyAsync(
-                c => c.Code == code,
-                ct);
-    }
-
-
-
-
-
-    // =====================================
-    // PAGINATION + FILTERING + SORTING
-    // =====================================
-
-    public async Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
-        PagedRequest request,
-        CancellationToken ct)
-    {
-
-
-        // 1. Start IQueryable without tracking
-
-        IQueryable<Course> query =
-            context.Courses
-            .AsNoTracking();
-
-
-
-        // 2. Search filter
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        return new CourseDto
         {
-            query = query.Where(c =>
-                EF.Functions.ILike(
-                    c.Title,
-                    $"%{request.Search}%")
-                ||
-                EF.Functions.ILike(
-                    c.Code,
-                    $"%{request.Search}%"));
+            Id = course.Id,
+            Title = course.Title,
+            Description = course.Description,
+            MaxCapacity = course.MaxCapacity
+        };
+
+    }
+
+
+
+
+
+
+    public async Task<CourseDto?> UpdateCourseAsync(
+        int id,
+        CourseRequestDto request,
+        CancellationToken ct)
+    {
+
+        var course =
+            await context.Courses
+            .FirstOrDefaultAsync(
+                c => c.Id == id,
+                ct);
+
+
+        if(course is null)
+        {
+            return null;
         }
 
 
 
-
-
-        // 3. Count BEFORE Skip/Take
-
-        var totalCount =
-            await query.CountAsync(ct);
-
-
+        course.Title = request.Title;
+#pragma warning disable CS8601 // Possible null reference assignment.
+        course.Description = request.Description;
+#pragma warning restore CS8601 // Possible null reference assignment.
+        course.MaxCapacity = request.MaxCapacity;
 
 
 
+        await context.SaveChangesAsync(ct);
 
-        // 4. Sorting
 
-        query = request.OrderBy?.ToLower()
-        switch
+
+        return new CourseDto
         {
-
-            "code" =>
-                request.Descending
-                ?
-                query.OrderByDescending(c => c.Code)
-                :
-                query.OrderBy(c => c.Code),
-
-
-
-            "maxcapacity" =>
-                request.Descending
-                ?
-                query.OrderByDescending(c => c.MaxCapacity)
-                :
-                query.OrderBy(c => c.MaxCapacity),
-
-
-
-            _ =>
-                request.Descending
-                ?
-                query.OrderByDescending(c => c.Title)
-                :
-                query.OrderBy(c => c.Title)
-
+            Id = course.Id,
+            Title = course.Title,
+            Description = course.Description,
+            MaxCapacity = course.MaxCapacity
         };
 
-
-
-
-
-
-
-        // 5. Paging + Projection
-
-        var items =
-            await query
-
-            .Skip(
-                (request.Page - 1)
-                * request.PageSize)
-
-            .Take(request.PageSize)
-
-
-            .Select(c =>
-                new CourseResponseDto(
-                    c.Id,
-                    c.Code,
-                    c.Title,
-                    c.MaxCapacity,
-                    c.Enrollments.Count
-                ))
-
-            .ToListAsync(ct);
-
-
-
-
-
-
-
-        // 6. Return paged response
-
-        return new PagedResponse<CourseResponseDto>
-        {
-            Items = items,
-
-            TotalCount = totalCount,
-
-            Page = request.Page,
-
-            PageSize = request.PageSize
-        };
     }
 
-    public Task GetAsync(PagedRequest request, CancellationToken ct)
+
+
+
+
+
+
+    public async Task<bool> DeleteCourseAsync(
+        int id,
+        CancellationToken ct)
     {
-        throw new NotImplementedException();
+
+        var course =
+            await context.Courses
+            .FirstOrDefaultAsync(
+                c => c.Id == id,
+                ct);
+
+
+        if(course is null)
+        {
+            return false;
+        }
+
+
+        context.Courses.Remove(course);
+
+
+        await context.SaveChangesAsync(ct);
+
+
+        return true;
+
     }
+
 }

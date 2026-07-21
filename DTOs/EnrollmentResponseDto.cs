@@ -1,8 +1,13 @@
-namespace Tms.Dtos
+
+namespace Tms.Api.Dtos;
+
+public class EnrollmentResponseDto
 {
-    public record EnrollmentResponseDto(
-        int Id,
-        int CourseId,
-        string StudentId
-    );
+    public int Id { get; set; }
+
+    public int CourseId { get; set; }
+
+    public int StudentId { get; set; }
+
+    public DateTime EnrolledAt { get; set; }
 }

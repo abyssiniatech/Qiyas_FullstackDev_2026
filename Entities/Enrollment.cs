@@ -6,10 +6,11 @@ public class Enrollment
 
     public int CourseId { get; set; }
 
-    public required int StudentId { get; set; }
+    public int StudentId { get; set; }
+
+    public DateTime EnrolledAt { get; set; }
 
 
-    // Navigation properties
     public Course Course { get; set; } = null!;
 
     public Student Student { get; set; } = null!;

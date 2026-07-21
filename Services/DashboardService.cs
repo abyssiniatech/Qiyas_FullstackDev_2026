@@ -1,75 +1,53 @@
 using Microsoft.EntityFrameworkCore;
-using TmsApi.Data;
 using TmsApi.DTOs;
+using TmsApi.Persistence;
 
+namespace TmsApi.Services;
 
 public class DashboardService
 {
+    private readonly AppDbContext context;
 
-    private readonly TmsDbContext _context;
-
-
-    public DashboardService(TmsDbContext context)
+    public DashboardService(AppDbContext context)
     {
-        _context = context;
+        this.context = context;
     }
-
-
 
     public async Task<List<StudentDto>> GetStudentsPagedAsync(
         int pageNumber,
         CancellationToken cancellationToken)
     {
-        int pageSize = 20;
+        const int pageSize = 20;
 
-        return await _context.Students
-            .OrderBy(s => s.Name)
+        return await context.Students
+            .OrderBy(s => EF.Property<string>(s, "Name"))
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(s => new StudentDto
             {
-                Id = s.Id,
-                Name = (string)(s.Name ?? string.Empty)
+                Id = EF.Property<int>(s, "Id"),
+                Name = EF.Property<string>(s, "Name") ?? string.Empty
             })
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<CourseEnrollmentSummaryDto>>
-    GetTopCoursesAsync(
+    public async Task<List<CourseEnrollmentSummaryDto>> GetTopCoursesAsync(
         CancellationToken cancellationToken)
     {
-
-
-        return await _context.Courses
-
-        .GroupBy(c => new
-        {
-            c.Id,
-            c.Title
-        })
-
-
-        .Select(g => new CourseEnrollmentSummaryDto
-        {
-            CourseTitle = g.Key.Title,
-            EnrollmentCount = g.Count()
-        })
-
-
-        .OrderByDescending(x => x.EnrollmentCount)
-
-        .Take(5)
-
-        .ToListAsync(cancellationToken);
-
-
+        return await context.Courses
+            .Select(c => new CourseEnrollmentSummaryDto
+            {
+                CourseTitle = c.Title,
+                EnrollmentCount = c.Enrollments.Count
+            })
+            .OrderByDescending(c => c.EnrollmentCount)
+            .Take(5)
+            .ToListAsync(cancellationToken);
     }
-
-
 }
 
 public class CourseEnrollmentSummaryDto
 {
-    public string? CourseTitle { get; internal set; }
-    public int EnrollmentCount { get; internal set; }
+    public string CourseTitle { get; set; } = string.Empty;
+    public int EnrollmentCount { get; set; }
 }
