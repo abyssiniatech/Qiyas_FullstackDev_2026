@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Tms.Api.Controllers;
 using Tms.Api.Dtos;
 using TmsApi.Entities;
 using TmsApi.Persistence;
@@ -101,5 +102,20 @@ public class EnrollmentService : IEnrollmentService
             StudentId = enrollment.StudentId,
             EnrolledAt = enrollment.EnrolledAt
         };
+    }
+
+    public Task<EnrollmentResponseDto> UpdateAsync(int courseId, int id, UpdateEnrollmentRequest request, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<EnrollmentResponseDto> PatchAsync(int courseId, int id, PatchEnrollmentRequest request, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task DeleteAsync(int courseId, int id, CancellationToken ct)
+    {
+        throw new NotImplementedException();
     }
 }

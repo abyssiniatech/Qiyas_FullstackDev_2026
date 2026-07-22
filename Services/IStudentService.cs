@@ -1,22 +1,3 @@
-// using Tms.Api.Dtos;
-// using TmsApi.DTOs;
-
-// namespace TmsApi.Services;
-
-// public interface IStudentService
-// {
-//     Task<IReadOnlyList<StudentDto>> GetStudentsAsync(
-//         int page,
-//         int pageSize,
-//         CancellationToken ct);
-
-
-//     Task<StudentDto?> GetStudentByIdAsync(
-//         int id,
-//         CancellationToken ct);
-// }
-
-
 using Tms.Api.Dtos;
 
 namespace TmsApi.Services;
@@ -44,12 +25,11 @@ public interface IStudentService
     Task<bool> DeleteStudentAsync(
         int id,
         CancellationToken ct);
-    Task UpdateStudentAsync(int id, Tms.Api.Dtos.StudentRequestDto request, CancellationToken ct);
-    Task<dynamic> CreateStudentAsync(StudentRequestDto request, object entity, CancellationToken ct);
 }
 
-public class StudentRequestDto
+public class StudentResponseDto
 {
-    public string Name { get; internal set; }
-    public object Email { get; internal set; }
+    public int Id { get; internal set; }
+    public string? Name { get; internal set; }
+    public string? Email { get; internal set; }
 }

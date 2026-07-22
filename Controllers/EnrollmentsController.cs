@@ -121,4 +121,56 @@ public class EnrollmentsController : ControllerBase
             },
             result);
     }
+
+    // PATCH api/courses/{courseId}/enrollments/{id}
+
+    [HttpPatch("{id:int}")]
+    [ProducesResponseType(typeof(EnrollmentResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [EndpointSummary("Partially update an enrollment")]
+    public async Task<IActionResult> PatchEnrollment(
+        int courseId,
+        int id,
+        [FromBody] PatchEnrollmentRequest request,
+        CancellationToken ct)
+    {
+        var enrollment =
+            await enrollmentService.PatchAsync(
+                courseId,
+                id,
+                request,
+                ct);
+
+        return Ok(enrollment);
+    }
+
+
+
+    // DELETE api/courses/{courseId}/enrollments/{id}
+
+[HttpDelete("{id:int}")]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+[EndpointSummary("Delete an enrollment")]
+public async Task<IActionResult> DeleteEnrollment(
+    int courseId,
+    int id,
+    CancellationToken ct)
+{
+    await enrollmentService.DeleteAsync(
+        courseId,
+        id,
+        ct);
+
+    return NoContent();
+}
+}
+
+public class PatchEnrollmentRequest
+{
+}
+
+public class EnrollStudentRequest
+{
+    public int StudentId { get; internal set; }
 }

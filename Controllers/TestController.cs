@@ -1,36 +1,56 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Linq;
-using TmsApi.Data;
+using Microsoft.EntityFrameworkCore;
 using TmsApi.Persistence;
-namespace TmsApi.Controllers;
+using TmsApi.Entities;
 
-// Minimal Student model to satisfy compilation when the Student type
-// is not available from other project files. Adjust or remove if a
-// proper Student model exists elsewhere in the project.
-internal class Student
-{
-    public int Id { get; set; }
-    public string? Name { get; set; }
-    public decimal GPA { get; set; }
-    public object Email { get; internal set; }
-}
+namespace TmsApi.Controllers;
 
 [ApiController]
 [Route("api/test")]
-public class TestController(AppDbContext context) : ControllerBase
+[Tags("Test")]
+[Produces("application/json")]
+[ProducesResponseType(
+    typeof(ProblemDetails),
+    StatusCodes.Status500InternalServerError)]
+public class TestController : ControllerBase
 {
+    private readonly AppDbContext context;
+
+    public TestController(AppDbContext context)
+    {
+        this.context = context;
+    }
+
+    // GET api/test/deferred
+
     [HttpGet("deferred")]
+    [ProducesResponseType(
+        typeof(IReadOnlyList<Student>),
+        StatusCodes.Status200OK)]
+    [EndpointSummary("Demonstrate deferred execution")]
+    [EndpointDescription(
+        "Shows that LINQ queries are not executed until they are materialized.")]
     public IActionResult TestDeferred()
     {
-        Console.WriteLine("\n>>> STEP 1: Building the query object (no database contact)...");
-        var query = context.Set<Student>().Where(s => s.GPA >= 3.0m);
-        Console.WriteLine(">>> STEP 2: Appending a sorting clause...");
-        var orderedQuery = query.OrderBy(s => s.Name);
-        Console.WriteLine(">>> STEP 3: Materializing query into a C# List...");
-        var results = orderedQuery.ToList(); // Execution is triggered here
-        Console.WriteLine(">>> STEP 4: Materialization finished. List populated.\n");
-        return Ok(results);
+        Console.WriteLine("\n>>> STEP 1: Building query (no SQL executed yet)...");
+
+        var query =
+            context.Students
+                .Where(s => s.GPA >= 3.0m);
+
+        Console.WriteLine(">>> STEP 2: Adding OrderBy...");
+
+        var orderedQuery =
+            query.OrderBy(s => s.Name);
+
+        Console.WriteLine(">>> STEP 3: Calling ToList()...");
+
+        var students =
+            orderedQuery.ToList();
+
+        Console.WriteLine(">>> STEP 4: Query executed.\n");
+
+        return Ok(students);
     }
 
     private static bool IsHonorRoll(decimal gpa)
@@ -38,21 +58,41 @@ public class TestController(AppDbContext context) : ControllerBase
         return gpa >= 3.5m;
     }
 
+    // GET api/test/translation-fail
+
     [HttpGet("translation-fail")]
+    [ProducesResponseType(
+        typeof(object),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status400BadRequest)]
+    [EndpointSummary("Demonstrate EF Core translation failure")]
+    [EndpointDescription(
+        "Shows what happens when EF Core cannot translate a C# method into SQL.")]
     public IActionResult TestTranslationFail()
     {
-        Console.WriteLine("\n>>> STEP 1: Running non-translatable query...");
+        Console.WriteLine("\n>>> STEP 1: Executing non-translatable query...");
+
         try
         {
-            var students = context.Set<Student>()
-                .Where(s => IsHonorRoll(s.GPA)) // EF Core does not know how to map this method to SQL
-                .ToList();
+            var students =
+                context.Students
+                    .Where(s => IsHonorRoll(s.GPA))
+                    .ToList();
+
             return Ok(students);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($">>> EXCEPTION CAUGHT: {ex.Message}\n");
-            return BadRequest(new { Message = ex.Message });
+            Console.WriteLine($">>> EXCEPTION: {ex.Message}\n");
+
+            return BadRequest(new ProblemDetails
+            {
+                Title = "EF Core Translation Error",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
         }
     }
 }

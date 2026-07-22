@@ -10,12 +10,10 @@ public class ReportsController : ControllerBase
 {
     private readonly AppDbContext db;
 
-
     public ReportsController(AppDbContext db)
     {
         this.db = db;
     }
-
 
 
     // GET api/reports/courses/5
@@ -24,14 +22,24 @@ public class ReportsController : ControllerBase
         int courseId,
         CancellationToken ct)
     {
-        var courseExists =
-            await db.Courses
-                .AnyAsync(
-                    c => c.Id == courseId,
-                    ct);
+        var report = await db.Courses
+            .Where(c => c.Id == courseId)
+            .Select(c => new
+            {
+                CourseId = c.Id,
+                CourseCode = c.Code,
+                CourseTitle = c.Title,
+                MaxCapacity = c.MaxCapacity,
+
+                EnrollmentCount = c.Enrollments.Count(),
+
+                AvailableSeats =
+                    c.MaxCapacity - c.Enrollments.Count()
+            })
+            .FirstOrDefaultAsync(ct);
 
 
-        if (!courseExists)
+        if (report == null)
         {
             return NotFound(new
             {
@@ -40,18 +48,6 @@ public class ReportsController : ControllerBase
         }
 
 
-        var enrollmentCount =
-            await db.Enrollments
-                .CountAsync(
-                    e => e.CourseId == courseId,
-                    ct);
-
-
-
-        return Ok(new
-        {
-            courseId,
-            enrollmentCount
-        });
+        return Ok(report);
     }
 }

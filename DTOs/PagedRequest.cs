@@ -10,4 +10,5 @@ public class StudentRequestDto
     public string Email { get; set; } = string.Empty;
 
     public DateOnly DateOfBirth { get; set; }
+    public string? Name { get; internal set; }
 }
