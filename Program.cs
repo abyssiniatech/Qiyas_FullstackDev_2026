@@ -1,27 +1,26 @@
+using Asp.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using Asp.Versioning;
+
+using Tms.Api.Filters;
+using Tms.Api.Services;
 
 using TmsApi.Data;
+using TmsApi.Middleware;
 using TmsApi.Persistence;
 using TmsApi.Services;
-using Tms.Api.Services;
-using TmsApi.Middleware;
-using Tms.Api.Filters;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-// =============================
+// ===========================================
 // DATABASE
-// =============================
+// ===========================================
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("TmsDatabase")
-    );
+        builder.Configuration.GetConnectionString("TmsDatabase"));
 
     if (builder.Environment.IsDevelopment())
     {
@@ -29,15 +28,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
         options.LogTo(
             Console.WriteLine,
-            LogLevel.Information
-        );
+            LogLevel.Information);
     }
 });
 
 
-// =============================
-// CONTROLLERS + FILTERS
-// =============================
+// ===========================================
+// CONTROLLERS
+// ===========================================
 
 builder.Services
     .AddControllers(options =>
@@ -51,95 +49,75 @@ builder.Services
     });
 
 
-// =============================
+// ===========================================
 // API VERSIONING
-// =============================
+// ===========================================
 
 builder.Services
     .AddApiVersioning(options =>
     {
-        // Default API version
-        options.DefaultApiVersion =
-            new ApiVersion(1, 0);
+        options.DefaultApiVersion = new ApiVersion(1, 0);
 
-
-        // Allow:
-        // /api/courses
-        // while migrating clients
         options.AssumeDefaultVersionWhenUnspecified = true;
 
-
-        // Adds:
-        // api-supported-versions: 1.0,2.0
         options.ReportApiVersions = true;
-
-
-        // VERSION READERS
-        //
-        // Primary:
-        // /api/v1/courses
-        // /api/v2/courses
-        //
-        // Partner escape hatch:
-        // GET /api/courses
-        // Header:
-        // X-Api-Version: 2.0
 
         options.ApiVersionReader =
             ApiVersionReader.Combine(
                 new UrlSegmentApiVersionReader(),
-                new HeaderApiVersionReader("X-Api-Version")
-            );
-
+                new HeaderApiVersionReader("X-Api-Version"));
     })
     .AddApiExplorer(options =>
     {
-        // Scalar groups:
-        // v1
-        // v2
-
         options.GroupNameFormat = "'v'VVV";
 
         options.SubstituteApiVersionInUrl = true;
     });
 
 
-// =============================
-// OPENAPI
-// =============================
+// ===========================================
+// OPENAPI DOCUMENTS
+// ===========================================
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.ShouldInclude = description =>
+        description.GroupName == "v1";
+});
+
+builder.Services.AddOpenApi("v2", options =>
+{
+    options.ShouldInclude = description =>
+        description.GroupName == "v2";
+});
 
 
-// =============================
+// ===========================================
 // APPLICATION SERVICES
-// =============================
+// ===========================================
 
 builder.Services.AddScoped<ICourseService, CourseService>();
-
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
-
 builder.Services.AddScoped<IStudentService, StudentService>();
 
 
-// =============================
-// BUILD APP
-// =============================
+// ===========================================
+// BUILD
+// ===========================================
 
 var app = builder.Build();
 
 
-// =============================
+// ===========================================
 // V1 DEPRECATION HEADERS
-// MUST BE BEFORE MapControllers
-// =============================
+// ===========================================
 
 app.UseMiddleware<V1DeprecationMiddleware>();
 
 
-// =============================
+// ===========================================
 // DATABASE MIGRATION + SEED
-// =============================
+// ===========================================
 
 using (var scope = app.Services.CreateScope())
 {
@@ -147,32 +125,37 @@ using (var scope = app.Services.CreateScope())
         scope.ServiceProvider
             .GetRequiredService<AppDbContext>();
 
-
     await context.Database.MigrateAsync();
-
 
     await DataSeeder.SeedAsync(context);
 }
 
 
-// =============================
-// OPENAPI + SCALAR
-// =============================
+// ===========================================
+// OPENAPI
+// ===========================================
 
-app.MapOpenApi();
+app.MapOpenApi("/openapi/{documentName}.json");
 
+
+// ===========================================
+// SCALAR
+// ===========================================
 
 app.MapScalarApiReference(options =>
 {
     options.Title = "TMS API Documentation";
+
+    options
+        .AddDocument("v1", "API Version 1.0")
+        .AddDocument("v2", "API Version 2.0");
 });
 
 
-// =============================
+// ===========================================
 // CONTROLLERS
-// =============================
+// ===========================================
 
 app.MapControllers();
-
 
 app.Run();
