@@ -1,4 +1,5 @@
 using Tms.Api.Dtos;
+using TmsApi.Domain.Entities;
 
 namespace TmsApi.Application.Interfaces;
 
@@ -24,6 +25,10 @@ public interface ICourseService
         int id,
         CourseDto request,
         CancellationToken ct);
+
+        Task<Course?> GetByCodeAsync(
+    string courseCode,
+    CancellationToken cancellationToken);
 
 
     Task DeleteCourseAsync(

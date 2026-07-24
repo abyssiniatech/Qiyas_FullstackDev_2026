@@ -142,4 +142,28 @@ public class CourseService : ICourseService
 
         await context.SaveChangesAsync(ct);
     }
+    public async Task<Course?> GetByCodeAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        return await context.Courses
+            .Include(c => c.Enrollments)
+            .FirstOrDefaultAsync(
+                c => c.Code == code,
+                cancellationToken);
+    }
+
+    public async Task<bool> ExistsAsync(
+        int studentId,
+        string courseCode,
+        CancellationToken cancellationToken)
+    {
+        return await context.Enrollments
+            .Include(e => e.Course)
+            .AnyAsync(
+                e =>
+                    e.StudentId == studentId &&
+                    e.Course.Code == courseCode,
+                cancellationToken);
+    }
 }
