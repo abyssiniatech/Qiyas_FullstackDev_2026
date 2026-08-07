@@ -3,7 +3,10 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
+
 using TmsApi.Api.ExceptionHandlers;
 using TmsApi.Application.Behaviors;
 using TmsApi.Application.Enrollments.Commands;
@@ -15,8 +18,27 @@ using TmsApi.Infrastructure.Services;
 using TmsApi.Middleware;
 
 
-
 var builder = WebApplication.CreateBuilder(args);
+
+
+// ======================================================
+// CORS - ANGULAR CLIENT
+// ======================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularClient",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:4200"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
 
 
 // ======================================================
@@ -30,6 +52,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 
+
 // ======================================================
 // FLUENT VALIDATION
 // ======================================================
@@ -38,17 +61,20 @@ builder.Services.AddValidatorsFromAssembly(
     typeof(EnrollStudentValidator).Assembly);
 
 
+
 // ======================================================
-// MEDIATR PIPELINES
+// MEDIATR PIPELINE BEHAVIORS
 // ======================================================
 
 builder.Services.AddTransient(
     typeof(IPipelineBehavior<,>),
     typeof(LoggingBehavior<,>));
 
+
 builder.Services.AddTransient(
     typeof(IPipelineBehavior<,>),
     typeof(ValidationBehavior<,>));
+
 
 
 // ======================================================
@@ -85,7 +111,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 
-
 // ======================================================
 // CONTROLLERS
 // ======================================================
@@ -102,7 +127,6 @@ builder.Services
         System.Text.Json.Serialization
         .ReferenceHandler.IgnoreCycles;
     });
-
 
 
 
@@ -146,16 +170,35 @@ builder.Services
 
 
 // ======================================================
-// OPEN API
+// HYBRID CACHE
 // ======================================================
 
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions =
+        new HybridCacheEntryOptions
+        {
+            Expiration =
+                TimeSpan.FromMinutes(10),
+
+            LocalCacheExpiration =
+                TimeSpan.FromMinutes(2)
+        };
+});
+
+
+
+
+// ======================================================
+// OPEN API
+// ======================================================
 
 builder.Services.AddOpenApi("v1",
 options =>
 {
     options.ShouldInclude =
-    description =>
-    description.GroupName == "v1";
+        description =>
+        description.GroupName == "v1";
 });
 
 
@@ -163,8 +206,8 @@ builder.Services.AddOpenApi("v2",
 options =>
 {
     options.ShouldInclude =
-    description =>
-    description.GroupName == "v2";
+        description =>
+        description.GroupName == "v2";
 });
 
 
@@ -176,6 +219,8 @@ options =>
 
 builder.Services.AddScoped<ICourseService, CourseService>();
 
+builder.Services.AddScoped<ICachedCourseService, CachedCourseService>();
+
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
 builder.Services.AddScoped<StudentService>();
@@ -186,7 +231,7 @@ builder.Services.AddScoped<IDataSeeder, DataSeeder>();
 
 
 // ======================================================
-// BUILD
+// BUILD APPLICATION
 // ======================================================
 
 var app = builder.Build();
@@ -198,7 +243,6 @@ var app = builder.Build();
 // ERROR PIPELINE
 // ======================================================
 
-// app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -207,6 +251,17 @@ else
 {
     app.UseExceptionHandler();
 }
+
+
+
+
+// ======================================================
+// CORS
+// MUST COME BEFORE MAPCONTROLLERS
+// ======================================================
+
+app.UseCors("AngularClient");
+
 
 
 
@@ -237,37 +292,34 @@ using (var scope = app.Services.CreateScope())
 
 
 // ======================================================
-// OPENAPI
+// OPEN API
 // ======================================================
 
 app.MapOpenApi(
-"/openapi/{documentName}.json");
+    "/openapi/{documentName}.json");
 
 
 
 
 // ======================================================
-// SCALAR
+// SCALAR API DOCUMENTATION
 // ======================================================
 
 app.MapScalarApiReference(options =>
 {
-
     options.Title =
         "TMS API Documentation";
 
 
     options
         .AddDocument(
-        "v1",
-        "API Version 1.0")
+            "v1",
+            "API Version 1.0")
 
         .AddDocument(
-        "v2",
-        "API Version 2.0");
-
+            "v2",
+            "API Version 2.0");
 });
-
 
 
 
@@ -277,6 +329,7 @@ app.MapScalarApiReference(options =>
 // ======================================================
 
 app.MapControllers();
+
 
 
 
