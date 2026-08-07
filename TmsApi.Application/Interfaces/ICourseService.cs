@@ -10,28 +10,32 @@ public interface ICourseService
         int pageSize,
         CancellationToken ct);
 
+    Task<IReadOnlyList<CourseDto>> GetAllCoursesForCacheAsync(
+        CancellationToken ct);
 
     Task<CourseDto?> GetCourseByIdAsync(
         int id,
         CancellationToken ct);
 
-
     Task<CourseDto> CreateCourseAsync(
         CourseDto request,
         CancellationToken ct);
-
 
     Task<CourseDto?> UpdateCourseAsync(
         int id,
         CourseDto request,
         CancellationToken ct);
 
-        Task<Course?> GetByCodeAsync(
-    string courseCode,
-    CancellationToken cancellationToken);
-
-
     Task DeleteCourseAsync(
         int id,
         CancellationToken ct);
+
+    Task<Course?> GetByCodeAsync(
+        string courseCode,
+        CancellationToken cancellationToken);
+
+    Task<bool> ExistsAsync(
+        int studentId,
+        string courseCode,
+        CancellationToken cancellationToken);
 }

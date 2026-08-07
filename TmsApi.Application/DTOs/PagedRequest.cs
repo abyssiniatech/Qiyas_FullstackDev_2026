@@ -11,4 +11,5 @@ public class StudentRequestDto
 
     public DateOnly DateOfBirth { get; set; }
     public string? Name { get; internal set; }
+    public decimal GPA { get; set; }
 }
