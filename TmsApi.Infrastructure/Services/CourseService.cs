@@ -28,9 +28,31 @@ public class CourseService : ICourseService
             .Select(c => new CourseDto
             {
                 Id = c.Id,
+                Code = c.Code,
                 Title = c.Title,
                 Description = c.Description,
-                MaxCapacity = c.MaxCapacity
+                MaxCapacity = c.MaxCapacity,
+                EnrollmentCount = c.Enrollments.Count
+            })
+            .ToListAsync(ct);
+    }
+
+
+
+    public async Task<IReadOnlyList<CourseDto>> GetAllCoursesForCacheAsync(
+        CancellationToken ct)
+    {
+        return await context.Courses
+            .AsNoTracking()
+            .Include(c => c.Enrollments)
+            .Select(c => new CourseDto
+            {
+                Id = c.Id,
+                Code = c.Code,
+                Title = c.Title,
+                Description = c.Description,
+                MaxCapacity = c.MaxCapacity,
+                EnrollmentCount = c.Enrollments.Count
             })
             .ToListAsync(ct);
     }
@@ -47,9 +69,11 @@ public class CourseService : ICourseService
             .Select(c => new CourseDto
             {
                 Id = c.Id,
+                Code = c.Code,
                 Title = c.Title,
                 Description = c.Description,
-                MaxCapacity = c.MaxCapacity
+                MaxCapacity = c.MaxCapacity,
+                EnrollmentCount = c.Enrollments.Count
             })
             .FirstOrDefaultAsync(ct);
     }
@@ -62,6 +86,7 @@ public class CourseService : ICourseService
     {
         var course = new Course
         {
+            Code = request.Code!,
             Title = request.Title!,
             Description = request.Description!,
             MaxCapacity = request.MaxCapacity
@@ -76,9 +101,11 @@ public class CourseService : ICourseService
         return new CourseDto
         {
             Id = course.Id,
+            Code = course.Code,
             Title = course.Title,
             Description = course.Description,
-            MaxCapacity = course.MaxCapacity
+            MaxCapacity = course.MaxCapacity,
+            EnrollmentCount = 0
         };
     }
 
@@ -89,8 +116,7 @@ public class CourseService : ICourseService
         CourseDto request,
         CancellationToken ct)
     {
-        var course =
-            await context.Courses
+        var course = await context.Courses
             .FirstOrDefaultAsync(
                 c => c.Id == id,
                 ct);
@@ -102,6 +128,7 @@ public class CourseService : ICourseService
         }
 
 
+        course.Code = request.Code!;
         course.Title = request.Title!;
         course.Description = request.Description!;
         course.MaxCapacity = request.MaxCapacity;
@@ -113,9 +140,11 @@ public class CourseService : ICourseService
         return new CourseDto
         {
             Id = course.Id,
+            Code = course.Code,
             Title = course.Title,
             Description = course.Description,
-            MaxCapacity = course.MaxCapacity
+            MaxCapacity = course.MaxCapacity,
+            EnrollmentCount = course.Enrollments.Count
         };
     }
 
@@ -125,8 +154,7 @@ public class CourseService : ICourseService
         int id,
         CancellationToken ct)
     {
-        var course =
-            await context.Courses
+        var course = await context.Courses
             .FirstOrDefaultAsync(
                 c => c.Id == id,
                 ct);
@@ -141,5 +169,34 @@ public class CourseService : ICourseService
         context.Courses.Remove(course);
 
         await context.SaveChangesAsync(ct);
+    }
+
+
+
+    public async Task<Course?> GetByCodeAsync(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        return await context.Courses
+            .Include(c => c.Enrollments)
+            .FirstOrDefaultAsync(
+                c => c.Code == code,
+                cancellationToken);
+    }
+
+
+
+    public async Task<bool> ExistsAsync(
+        int studentId,
+        string courseCode,
+        CancellationToken cancellationToken)
+    {
+        return await context.Enrollments
+            .Include(e => e.Course)
+            .AnyAsync(
+                e =>
+                    e.StudentId == studentId &&
+                    e.Course.Code == courseCode,
+                cancellationToken);
     }
 }

@@ -1,7 +1,16 @@
+namespace Tms.Api.Dtos;
+
 public class CourseResponseDto
 {
-    public int Id { get; internal set; }
-    public string? Title { get; internal set; }
-    public string? Description { get; internal set; }
-    public int MaxCapacity { get; internal set; }
+    public int Id { get; set; }
+
+    public string? Code { get; set; }
+
+    public string? Title { get; set; }
+
+    public string? Description { get; set; }
+
+    public int MaxCapacity { get; set; }
+
+    public int EnrollmentCount { get; set; }
 }

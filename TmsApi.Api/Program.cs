@@ -1,201 +1,536 @@
+using System.Threading.RateLimiting;
+
 using Asp.Versioning;
-using Microsoft.AspNetCore.Mvc.Filters;
+using FluentValidation;
+using MediatR;
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
+
 using Scalar.AspNetCore;
+
+using TmsApi.Api.RateLimiting;
+using TmsApi.Application.Behaviors;
+using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Application.Interfaces;
+
 using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Persistence.Services;
-using TmsApi.Infrastructure.Seeding;
 using TmsApi.Infrastructure.Services;
-using TmsApi.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-// ===========================================
-// DATABASE
-// ===========================================
+// =================================
+// Controllers
+// =================================
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("TmsDatabase"));
-
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-
-        options.LogTo(
-            Console.WriteLine,
-            LogLevel.Information);
-    }
-});
+builder.Services.AddControllers();
 
 
+// =================================
+// OpenAPI / Scalar
+// =================================
 
-// ===========================================
-// CONTROLLERS
-// ===========================================
-
-builder.Services
-    .AddControllers(options =>
-    {
-        options.Filters.Add<AuditLogFilter>();
-    })
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler =
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    });
+builder.Services.AddOpenApi();
 
 
-
-// ===========================================
-// API VERSIONING
-// ===========================================
+// =================================
+// API Versioning
+// =================================
 
 builder.Services
     .AddApiVersioning(options =>
     {
         options.DefaultApiVersion =
-            new ApiVersion(1, 0);
+            new ApiVersion(2, 0);
 
-        options.AssumeDefaultVersionWhenUnspecified =
-            true;
+        options.AssumeDefaultVersionWhenUnspecified = true;
 
         options.ReportApiVersions = true;
 
-        options.ApiVersionReader =
-            ApiVersionReader.Combine(
-                new UrlSegmentApiVersionReader(),
-                new HeaderApiVersionReader(
-                    "X-Api-Version"));
     })
     .AddApiExplorer(options =>
     {
         options.GroupNameFormat = "'v'VVV";
 
         options.SubstituteApiVersionInUrl = true;
+
     });
 
 
 
-// ===========================================
-// OPENAPI
-// ===========================================
-
-builder.Services.AddOpenApi("v1",
-    options =>
-    {
-        options.ShouldInclude =
-            description =>
-                description.GroupName == "v1";
-    });
-
-
-builder.Services.AddOpenApi("v2",
-    options =>
-    {
-        options.ShouldInclude =
-            description =>
-                description.GroupName == "v2";
-    });
+builder.Logging.AddConsole();
 
 
 
-// ===========================================
-// APPLICATION + INFRASTRUCTURE SERVICES
-// ===========================================
+// =================================
+// Database PostgreSQL
+// =================================
 
-// ===========================================
-// APPLICATION + INFRASTRUCTURE SERVICES
-// ===========================================
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+
+    options.UseNpgsql(
+        builder.Configuration
+        .GetConnectionString("TmsDatabase"));
+
+});
+
+
+
+
+// =================================
+// MediatR
+// =================================
+
+builder.Services.AddMediatR(cfg =>
+{
+
+    cfg.RegisterServicesFromAssembly(
+        typeof(EnrollStudentCommand).Assembly);
+
+});
+
+
+
+// =================================
+// Fluent Validation
+// =================================
+
+builder.Services
+    .AddValidatorsFromAssemblyContaining<
+        EnrollStudentCommand>();
+
+
+
+
+// =================================
+// MediatR Pipeline
+// =================================
+
+
+builder.Services.AddTransient(
+    typeof(IPipelineBehavior<,>),
+    typeof(LoggingBehavior<,>));
+
+
+builder.Services.AddTransient(
+    typeof(IPipelineBehavior<,>),
+    typeof(ValidationBehavior<,>));
+
+
+
+
+// =================================
+// Hybrid Cache
+// =================================
+
+builder.Services.AddHybridCache(options =>
+{
+
+    options.DefaultEntryOptions =
+        new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+        {
+
+            Expiration =
+                TimeSpan.FromMinutes(10),
+
+
+            LocalCacheExpiration =
+                TimeSpan.FromMinutes(2)
+
+        };
+
+});
+
+
+
+
+// =================================
+// Application Services
+// =================================
+
+
+builder.Services.AddScoped<IStudentService, StudentService>();
+
 
 builder.Services.AddScoped<ICourseService, CourseService>();
 
-builder.Services.AddScoped<StudentService>();
+
+builder.Services.AddScoped<ICachedCourseService, CachedCourseService>();
+
 
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
-builder.Services.AddScoped<IDataSeeder, DataSeeder>();
 
 
 
-// ===========================================
-// BUILD APP
-// ===========================================
+// =================================
+// Exception Handling
+// =================================
+
+// Register Problem Details for consistent error responses
+builder.Services.AddProblemDetails();
+
+
+
+
+// =================================
+// CORS Angular
+// =================================
+
+
+builder.Services.AddCors(options =>
+{
+
+    options.AddPolicy(
+        "AngularClient",
+        policy =>
+        {
+
+            policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .WithOrigins(
+                "http://localhost:4200");
+
+        });
+
+});
+
+
+
+
+
+// =================================
+// RATE LIMITING
+// =================================
+
+
+builder.Services.AddSingleton<ApiKeyResolver>();
+
+
+builder.Services.AddRateLimiter(options =>
+{
+
+
+    // -----------------------------
+    // Global Tier Limiter
+    // -----------------------------
+
+
+    options.GlobalLimiter =
+        PartitionedRateLimiter
+        .Create<HttpContext, string>(
+        httpContext =>
+        {
+
+
+            var resolver =
+                httpContext.RequestServices
+                .GetRequiredService<ApiKeyResolver>();
+
+
+            var result =
+                resolver.Resolve(httpContext);
+
+
+
+            return result switch
+            {
+
+
+                ApiKeyTier.Paid =>
+
+                RateLimitPartition
+                .GetTokenBucketLimiter(
+                $"paid:{result}",
+                _ =>
+                new TokenBucketRateLimiterOptions
+                {
+
+                    TokenLimit = 200,
+
+                    TokensPerPeriod = 100,
+
+                    ReplenishmentPeriod =
+                        TimeSpan.FromSeconds(10),
+
+                    QueueLimit = 0,
+
+                    AutoReplenishment = true
+
+                }),
+
+
+
+
+                ApiKeyTier.Free =>
+
+                RateLimitPartition
+                .GetTokenBucketLimiter(
+                $"free:{result}",
+                _ =>
+                new TokenBucketRateLimiterOptions
+                {
+
+                    TokenLimit = 30,
+
+                    TokensPerPeriod = 10,
+
+                    ReplenishmentPeriod =
+                        TimeSpan.FromSeconds(10),
+
+                    QueueLimit = 0,
+
+                    AutoReplenishment = true
+
+                }),
+
+
+
+
+                _ =>
+
+                RateLimitPartition
+                .GetTokenBucketLimiter(
+                $"anonymous:{result}",
+                _ =>
+                new TokenBucketRateLimiterOptions
+                {
+
+                    TokenLimit = 10,
+
+                    TokensPerPeriod = 5,
+
+                    ReplenishmentPeriod =
+                        TimeSpan.FromSeconds(10),
+
+                    QueueLimit = 0,
+
+                    AutoReplenishment = true
+
+                })
+
+            };
+
+
+        });
+
+
+
+
+
+    // -----------------------------
+    // Transcript Concurrency Limiter
+    // -----------------------------
+
+
+    options.AddConcurrencyLimiter(
+        "transcripts",
+        limiter =>
+        {
+
+            limiter.PermitLimit = 5;
+
+
+            limiter.QueueLimit = 20;
+
+
+            limiter.QueueProcessingOrder =
+                QueueProcessingOrder.OldestFirst;
+
+        });
+
+
+
+
+
+    // -----------------------------
+    // Search Limiter
+    // -----------------------------
+
+
+    options.AddTokenBucketLimiter(
+        "search",
+        limiter =>
+        {
+
+            limiter.TokenLimit = 10;
+
+
+            limiter.TokensPerPeriod = 5;
+
+
+            limiter.ReplenishmentPeriod =
+                TimeSpan.FromSeconds(10);
+
+
+            limiter.QueueLimit = 2;
+
+
+            limiter.AutoReplenishment = true;
+
+        });
+
+
+
+
+
+    options.RejectionStatusCode =
+        StatusCodes.Status429TooManyRequests;
+
+
+
+    options.OnRejected =
+        async (context, cancellationToken) =>
+        {
+
+
+            var retryAfter = "10";
+
+
+            if (context.Lease.TryGetMetadata(
+                MetadataName.RetryAfter,
+                out var retry))
+            {
+
+                retryAfter =
+                    ((int)retry.TotalSeconds)
+                    .ToString();
+
+            }
+
+
+
+
+            context.HttpContext.Response
+            .Headers.RetryAfter =
+                retryAfter;
+
+
+
+            context.HttpContext.Response
+            .ContentType =
+                "application/problem+json";
+
+
+
+
+            await context.HttpContext.Response
+                .WriteAsJsonAsync(
+                new
+                {
+
+                    title =
+                    "Rate limit exceeded",
+
+
+                    detail =
+                    $"Too many requests. Retry after {retryAfter} seconds.",
+
+
+                    status = 429
+
+                },
+                cancellationToken);
+
+        };
+
+});
+
+
+
+
+
+// =================================
+// Build Application
+// =================================
+
 
 var app = builder.Build();
 
 
 
-// ===========================================
-// MIDDLEWARE
-// ===========================================
-
-app.UseMiddleware<V1DeprecationMiddleware>();
 
 
+// =================================
+// OpenAPI
+// =================================
 
-// ===========================================
-// DATABASE MIGRATION + SEED
-// ===========================================
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
-    var seeder =
-        scope.ServiceProvider
-            .GetRequiredService<IDataSeeder>();
 
-    await seeder.SeedAsync();
+    app.MapOpenApi();
+
+
+    app.MapScalarApiReference(options =>
+    {
+
+        options.Title =
+            "TMS API";
+
+    });
+
 }
 
 
 
-// ===========================================
-// OPENAPI
-// ===========================================
 
-app.MapOpenApi(
-    "/openapi/{documentName}.json");
+// =================================
+// Middleware Pipeline
+// =================================
 
 
+app.UseExceptionHandler();
 
-// ===========================================
-// SCALAR
-// ===========================================
 
-app.MapScalarApiReference(options =>
-{
-    options.Title = "TMS API Documentation";
+app.UseHttpsRedirection();
 
-    options
-        .AddDocument(
-            "v1",
-            "API Version 1.0")
-        .AddDocument(
-            "v2",
-            "API Version 2.0");
-});
+
+app.UseCors("AngularClient");
+
+
+// IMPORTANT
+// Rate limiter before controllers
+
+app.UseRateLimiter();
+
+
+app.UseAuthorization();
 
 
 
-// ===========================================
-// ROUTES
-// ===========================================
 
 app.MapControllers();
 
 
-app.Run();
 
 
 
-// ===========================================
-// FILTER PLACEHOLDER
-// ===========================================
+// =================================
+// Database Migration
+// =================================
 
-internal class AuditLogFilter : IFilterMetadata
+
+using (var scope = app.Services.CreateScope())
 {
+
+    var db =
+        scope.ServiceProvider
+        .GetRequiredService<AppDbContext>();
+
+
+    db.Database.Migrate();
+
 }
+
+
+
+
+
+app.Run();

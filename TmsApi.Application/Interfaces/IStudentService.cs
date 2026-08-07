@@ -1,6 +1,6 @@
-
-
 using Tms.Api.Dtos;
+
+namespace TmsApi.Application.Interfaces;
 
 public interface IStudentService
 {
@@ -9,21 +9,24 @@ public interface IStudentService
         int pageSize,
         CancellationToken ct);
 
+
     Task<StudentResponseDto?> GetStudentByIdAsync(
         int id,
         CancellationToken ct);
 
+
     Task<StudentResponseDto> CreateStudentAsync(
         StudentRequestDto request,
         CancellationToken ct);
+
 
     Task<StudentResponseDto?> UpdateStudentAsync(
         int id,
         StudentRequestDto request,
         CancellationToken ct);
 
+
     Task<bool> DeleteStudentAsync(
         int id,
         CancellationToken ct);
 }
-
