@@ -1,5 +1,3 @@
-
-
 using Microsoft.EntityFrameworkCore;
 using TmsApi.Domain.Entities;
 
@@ -13,6 +11,10 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Course> Courses { get; set; } = null!;
+
     public DbSet<Student> Students { get; set; } = null!;
+
     public DbSet<Enrollment> Enrollments { get; set; } = null!;
+
+    public DbSet<Grade> Grades { get; set; } = null!;
 }

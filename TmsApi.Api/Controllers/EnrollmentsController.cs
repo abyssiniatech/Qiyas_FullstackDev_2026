@@ -1,16 +1,21 @@
+
 using Asp.Versioning;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+
 using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Application.Enrollments.Queries;
-
+using TmsApi.Application.Hubs;
+using TmsApi.Api.Hubs;
 
 [ApiController]
 [Route("api/v{version:apiVersion}/enrollments")]
 [ApiVersion("2.0")]
-public class EnrollmentsController(IMediator mediator) : ControllerBase
+public class EnrollmentsController(
+    IMediator mediator,
+    IHubContext<TmsHub, ITmsHubClient> hubContext) : ControllerBase
 {
-
     // GET: api/v2/enrollments
     [HttpGet]
     public async Task<IActionResult> GetAll(
@@ -24,16 +29,15 @@ public class EnrollmentsController(IMediator mediator) : ControllerBase
     }
 
 
-
     // POST: api/v2/enrollments
     [HttpPost]
     public async Task<IActionResult> Enroll(
         EnrollStudentCommand command,
         CancellationToken ct)
     {
-
-        var result = await mediator.Send(command, ct);
-
+        var result = await mediator.Send(
+            command,
+            ct);
 
         return result.Match(
 
@@ -46,10 +50,8 @@ public class EnrollmentsController(IMediator mediator) : ControllerBase
                     },
                     created),
 
-
             onFailure: error =>
             {
-
                 var status = error.Code switch
                 {
                     "course_not_found" =>
@@ -62,35 +64,50 @@ public class EnrollmentsController(IMediator mediator) : ControllerBase
                         StatusCodes.Status400BadRequest
                 };
 
-
                 return Problem(
                     statusCode: status,
                     title: "Enrollment rejected",
                     detail: error.Message,
                     type:
-                    $"https://tms.local/errors/{error.Code}"
+                        $"https://tms.local/errors/{error.Code}"
                 );
-
             });
-
     }
-
 
 
     // POST: api/v2/enrollments/{id}/approve
     [HttpPost("{id}/approve")]
-    public IActionResult Approve(
-        string id)
+    public async Task<IActionResult> Approve(
+        string id,
+        CancellationToken ct)
     {
+        // --------------------------------------------------
+        // Your existing approval logic goes here.
+        // The database approval must succeed BEFORE
+        // broadcasting the SignalR event.
+        // --------------------------------------------------
 
-        return Ok(new
-        {
-            id,
-            status = "Approved"
-        });
+        // TODO:
+        // Replace this with your actual approval command/service.
+        //
+        // Example:
+        // var result = await mediator.Send(
+        //     new ApproveEnrollmentCommand(id),
+        //     ct);
 
+
+        // --------------------------------------------------
+        // Broadcast enrollment status update
+        // --------------------------------------------------
+
+        await hubContext.Clients.All
+            .ReceiveEnrollmentStatusUpdated(
+                id,
+                "Approved");
+
+
+        return NoContent();
     }
-
 
 
     // GET: api/v2/enrollments/{studentId}/schedule
@@ -99,14 +116,11 @@ public class EnrollmentsController(IMediator mediator) : ControllerBase
         int studentId,
         CancellationToken ct)
     {
-
         var schedule = await mediator.Send(
             new GetStudentScheduleQuery(studentId),
             ct);
 
-
         return Ok(schedule);
-
     }
-
 }
+
