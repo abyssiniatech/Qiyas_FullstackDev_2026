@@ -1,6 +1,5 @@
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
-
 using Asp.Versioning;
 using FluentValidation;
 using MediatR;
@@ -12,6 +11,7 @@ using TmsApi.Api.Hubs;
 using TmsApi.Api.RateLimiting;
 
 using TmsApi.Application.Behaviors;
+using TmsApi.Application.Common.Interfaces;
 using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Application.Interfaces;
 using TmsApi.Application.Notifications;
@@ -37,31 +37,25 @@ builder.Services.AddSignalR();
 // ============================================================
 
 builder.Services
-.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion =
-    new ApiVersion(1, 0);
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
 
-    options.AssumeDefaultVersionWhenUnspecified =
-        true;
+        options.AssumeDefaultVersionWhenUnspecified = true;
 
-    options.ReportApiVersions =
-        true;
+        options.ReportApiVersions = true;
 
-    options.ApiVersionReader =
-        new UrlSegmentApiVersionReader();
-})
-.AddMvc()
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat =
-        "'v'VVV";
+        options.ApiVersionReader =
+            new UrlSegmentApiVersionReader();
+    })
+    .AddMvc()
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
 
-    options.SubstituteApiVersionInUrl =
-        true;
-})
-.AddOpenApi();
-
+        options.SubstituteApiVersionInUrl = true;
+    })
+    .AddOpenApi();
 
 // ============================================================
 // LOGGING
@@ -76,9 +70,23 @@ builder.Logging.AddConsole();
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(
-    builder.Configuration
-    .GetConnectionString("TmsDatabase"));
+        builder.Configuration.GetConnectionString(
+            "TmsDatabase"));
 });
+
+// ============================================================
+// IMPORTANT:
+// IApplicationDbContext → AppDbContext
+//
+// MediatR handlers such as GetGradesHandler may depend on
+// IApplicationDbContext instead of AppDbContext.
+//
+// Without this registration ASP.NET Core cannot construct
+// those handlers.
+// ============================================================
+
+builder.Services.AddScoped<IApplicationDbContext>(
+    sp => (IApplicationDbContext)sp.GetRequiredService<AppDbContext>());
 
 // ============================================================
 // MEDIATR
@@ -87,7 +95,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(
-    typeof(EnrollStudentCommand).Assembly);
+        typeof(EnrollStudentCommand).Assembly);
 });
 
 // ============================================================
@@ -95,20 +103,20 @@ builder.Services.AddMediatR(cfg =>
 // ============================================================
 
 builder.Services
-.AddValidatorsFromAssemblyContaining<
-EnrollStudentCommand>();
+    .AddValidatorsFromAssemblyContaining<
+        EnrollStudentCommand>();
 
 // ============================================================
-// MEDIATR PIPELINE
+// MEDIATR PIPELINE BEHAVIORS
 // ============================================================
 
 builder.Services.AddTransient(
-typeof(IPipelineBehavior<,>),
-typeof(LoggingBehavior<,>));
+    typeof(IPipelineBehavior<,>),
+    typeof(LoggingBehavior<,>));
 
 builder.Services.AddTransient(
-typeof(IPipelineBehavior<,>),
-typeof(ValidationBehavior<,>));
+    typeof(IPipelineBehavior<,>),
+    typeof(ValidationBehavior<,>));
 
 // ============================================================
 // HYBRID CACHE
@@ -117,18 +125,15 @@ typeof(ValidationBehavior<,>));
 builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions =
-    new Microsoft.Extensions.Caching.Hybrid
-    .HybridCacheEntryOptions
-    {
-        Expiration =
-    TimeSpan.FromMinutes(10),
+        new Microsoft.Extensions.Caching.Hybrid
+            .HybridCacheEntryOptions
+        {
+            Expiration =
+                TimeSpan.FromMinutes(10),
 
-
-        LocalCacheExpiration =
+            LocalCacheExpiration =
                 TimeSpan.FromMinutes(2)
-    };
-
-
+        };
 });
 
 // ============================================================
@@ -136,72 +141,61 @@ builder.Services.AddHybridCache(options =>
 // ============================================================
 
 builder.Services.AddScoped<
-IStudentService,
-StudentService>();
+    IStudentService,
+    StudentService>();
 
 builder.Services.AddScoped<
-ICourseService,
-CourseService>();
+    ICourseService,
+    CourseService>();
 
 builder.Services.AddScoped<
-ICachedCourseService,
-CachedCourseService>();
+    ICachedCourseService,
+    CachedCourseService>();
 
 builder.Services.AddScoped<
-IEnrollmentService,
-EnrollmentService>();
+    IEnrollmentService,
+    EnrollmentService>();
 
 // ============================================================
 // TRANSCRIPT STATUS STORE
 // ============================================================
 
-// Shared in-memory status store.
-//
-// Singleton is required because the controller and the
-// background worker must see the same transcript states.
-
 builder.Services.AddSingleton<
-ITranscriptStatusStore,
-InMemoryTranscriptStatusStore>();
+    ITranscriptStatusStore,
+    InMemoryTranscriptStatusStore>();
 
 // ============================================================
 // TRANSCRIPT NOTIFICATION SERVICE
 // ============================================================
 
-// SignalR IHubContext is safe to use from a singleton service.
-// The service contains no request-specific mutable state.
-
 builder.Services.AddSingleton<
-ITranscriptNotificationService,
-SignalRTranscriptNotificationService>();
+    ITranscriptNotificationService,
+    SignalRTranscriptNotificationService>();
 
 // ============================================================
-// TRANSCRIPT BACKGROUND PROCESSING
+// TRANSCRIPT CHANNEL
 // ============================================================
 
-// Shared channel between TranscriptsController
-// and TranscriptWorker.
-
 builder.Services.AddSingleton<
-Channel<TranscriptRequest>>(
-_ =>
-Channel.CreateBounded<TranscriptRequest>(
-new BoundedChannelOptions(100)
-{
-    FullMode =
-BoundedChannelFullMode.Wait,
+    Channel<TranscriptRequest>>(
+        _ =>
+            Channel.CreateBounded<TranscriptRequest>(
+                new BoundedChannelOptions(100)
+                {
+                    FullMode =
+                        BoundedChannelFullMode.Wait,
 
+                    SingleReader = true,
 
-    SingleReader = true,
+                    SingleWriter = false
+                }));
 
-    SingleWriter = false
-}));
-
-
-// Background worker.
+// ============================================================
+// TRANSCRIPT BACKGROUND WORKER
+// ============================================================
 
 builder.Services.AddHostedService<
-TranscriptWorker>();
+    TranscriptWorker>();
 
 // ============================================================
 // PROBLEM DETAILS
@@ -216,16 +210,16 @@ builder.Services.AddProblemDetails();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
-    "AngularClient",
-    policy =>
-    {
-        policy
-    .WithOrigins(
-    "http://localhost:4200")
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .AllowCredentials();
-    });
+        "AngularClient",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:4200")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
 });
 
 // ============================================================
@@ -239,7 +233,6 @@ builder.Services.AddRateLimiter(options =>
     // ========================================================
     // GLOBAL RATE LIMITER
     // ========================================================
-
 
     options.GlobalLimiter =
         PartitionedRateLimiter
@@ -257,9 +250,9 @@ builder.Services.AddRateLimiter(options =>
 
                     return tier switch
                     {
-                        // =================================================
+                        // =============================================
                         // PAID
-                        // =================================================
+                        // =============================================
 
                         ApiKeyTier.Paid =>
                             RateLimitPartition
@@ -280,9 +273,9 @@ builder.Services.AddRateLimiter(options =>
                                             AutoReplenishment = true
                                         }),
 
-                        // =================================================
+                        // =============================================
                         // FREE
-                        // =================================================
+                        // =============================================
 
                         ApiKeyTier.Free =>
                             RateLimitPartition
@@ -303,9 +296,9 @@ builder.Services.AddRateLimiter(options =>
                                             AutoReplenishment = true
                                         }),
 
-                        // =================================================
+                        // =============================================
                         // ANONYMOUS
-                        // =================================================
+                        // =============================================
 
                         _ =>
                             RateLimitPartition
@@ -365,7 +358,7 @@ builder.Services.AddRateLimiter(options =>
         });
 
     // ========================================================
-    // REJECTION
+    // RATE LIMIT REJECTION
     // ========================================================
 
     options.RejectionStatusCode =
@@ -411,12 +404,10 @@ builder.Services.AddRateLimiter(options =>
                     },
                     cancellationToken);
         };
-
-
 });
 
 // ============================================================
-// BUILD
+// BUILD APPLICATION
 // ============================================================
 
 var app = builder.Build();
@@ -433,9 +424,7 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi()
-    .WithDocumentPerVersion();
-
+    app.MapOpenApi();
 
     app.MapScalarApiReference(
         options =>
@@ -455,7 +444,8 @@ if (app.Environment.IsDevelopment())
                     description.GroupName!;
 
                 var title =
-                    $"TMS API {documentName.ToUpperInvariant()}";
+                    $"TMS API " +
+                    $"{documentName.ToUpperInvariant()}";
 
                 var isDefault =
                     documentName == "v2";
@@ -466,18 +456,14 @@ if (app.Environment.IsDevelopment())
                     isDefault: isDefault);
             }
         });
-
-
 }
 
 // ============================================================
 // HTTPS
 // ============================================================
 
-// Current testing uses:
+// Development testing uses:
 // http://localhost:5071
-//
-// HTTPS redirection remains disabled for now.
 
 // app.UseHttpsRedirection();
 
@@ -504,7 +490,7 @@ app.UseAuthorization();
 // ============================================================
 
 app.MapHub<TmsHub>(
-"/hubs/tms");
+    "/hubs/tms");
 
 // ============================================================
 // CONTROLLERS
@@ -517,16 +503,13 @@ app.MapControllers();
 // ============================================================
 
 using (var scope =
-app.Services.CreateScope())
+    app.Services.CreateScope())
 {
     var db =
-    scope.ServiceProvider
-    .GetRequiredService<AppDbContext>();
-
+        scope.ServiceProvider
+            .GetRequiredService<AppDbContext>();
 
     db.Database.Migrate();
-
-
 }
 
 // ============================================================

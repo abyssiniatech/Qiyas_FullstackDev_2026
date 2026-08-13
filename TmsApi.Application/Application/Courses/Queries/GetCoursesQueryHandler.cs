@@ -1,7 +1,6 @@
 using MediatR;
 using Tms.Api.Dtos;
 using TmsApi.Application.Interfaces;
-using TmsApi.Dtos;
 
 namespace TmsApi.Application.Courses.Queries;
 

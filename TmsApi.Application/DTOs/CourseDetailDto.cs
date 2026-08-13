@@ -1,6 +1,6 @@
+namespace Tms.Api.Dtos;
 
-
-namespace TmsApi.Dtos;
+public record LinkDto;
 
 public class CourseDetailDto
 {

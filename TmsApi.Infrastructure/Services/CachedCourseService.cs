@@ -205,8 +205,5 @@ public class CachedCourseService(
             ct);
     }
 
-    public Task<IReadOnlyList<CourseResponseDto>> GetCoursesAsync(object page, object pageSize, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
+   
 }
