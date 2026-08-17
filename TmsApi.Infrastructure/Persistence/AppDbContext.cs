@@ -3,18 +3,129 @@ using TmsApi.Domain.Entities;
 
 namespace TmsApi.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext
+public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options)
     {
     }
 
-    public DbSet<Course> Courses { get; set; } = null!;
+    public DbSet<Student> Students => Set<Student>();
 
-    public DbSet<Student> Students { get; set; } = null!;
+    public DbSet<Course> Courses => Set<Course>();
 
-    public DbSet<Enrollment> Enrollments { get; set; } = null!;
+    public DbSet<Enrollment> Enrollments => Set<Enrollment>();
 
-    public DbSet<Grade> Grades { get; set; } = null!;
+    public DbSet<Grade> Grades => Set<Grade>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // =========================
+        // Student
+        // =========================
+
+        modelBuilder.Entity<Student>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.Name)
+                .IsRequired();
+
+            entity.Property(s => s.Email)
+                .IsRequired();
+
+            entity.Property(s => s.GPA)
+                .HasPrecision(5, 2);
+
+            entity.Property(s => s.IsActive)
+                .HasDefaultValue(true);
+        });
+
+
+        // =========================
+        // Course
+        // =========================
+
+        modelBuilder.Entity<Course>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+
+            entity.HasIndex(c => c.Code)
+                .IsUnique();
+
+            entity.Property(c => c.Code)
+                .IsRequired();
+
+            entity.Property(c => c.Title)
+                .IsRequired();
+
+            entity.Property(c => c.Description)
+                .IsRequired();
+
+            entity.Property(c => c.MaxCapacity)
+                .IsRequired();
+        });
+
+
+        // =========================
+        // Enrollment
+        // =========================
+
+        modelBuilder.Entity<Enrollment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.EnrolledAt)
+                .IsRequired();
+
+            entity.HasOne(e => e.Student)
+                .WithMany(s => s.Enrollments)
+                .HasForeignKey(e => e.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Course)
+                .WithMany(c => c.Enrollments)
+                .HasForeignKey(e => e.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new
+            {
+                e.StudentId,
+                e.CourseId
+            })
+            .IsUnique();
+        });
+
+
+        // =========================
+        // Grade
+        // =========================
+
+        modelBuilder.Entity<Grade>(entity =>
+        {
+            entity.HasKey(g => g.GradeId);
+
+            entity.Property(g => g.AssessmentType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(g => g.Score)
+                .HasPrecision(5, 2);
+
+            entity.Property(g => g.CreatedAt)
+                .IsRequired();
+
+            entity.HasOne(g => g.Student)
+                .WithMany(s => s.Grades)
+                .HasForeignKey(g => g.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(g => g.Course)
+                .WithMany()
+                .HasForeignKey(g => g.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
 }

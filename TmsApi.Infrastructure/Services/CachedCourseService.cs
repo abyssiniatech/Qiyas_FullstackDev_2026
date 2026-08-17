@@ -1,112 +1,101 @@
+using Tms.Api.Dtos;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
-using Tms.Api.Dtos;
+using TmsApi.Application.Dtos;
 using TmsApi.Application.Interfaces;
 using TmsApi.Infrastructure.Caching;
-
+using TmsApi.Application;
 namespace TmsApi.Infrastructure.Services;
 
-public class CachedCourseService(
+public sealed class CachedCourseService(
     HybridCache cache,
-    ICourseService service,
+    ICourseService courseService,
     ILogger<CachedCourseService> logger)
     : ICachedCourseService
 {
-
     public async Task<CourseDto> GetCourseAsync(
         string code,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var key = CacheKeys.Course(code);
 
-        var dbHit = false;
+        var cacheMiss = false;
 
-        var dto = await cache.GetOrCreateAsync(
+        var course = await cache.GetOrCreateAsync(
             key,
-            (service, code),
+            (courseService, code),
             async (state, token) =>
             {
-                dbHit = true;
+                cacheMiss = true;
 
                 logger.LogInformation(
                     "Cache MISS for {Key}. Fetching from database.",
                     key);
 
+                var result =
+                    await state.courseService.GetByCodeAsync(
+                        state.code,
+                        token);
 
-                var course = await state.service.GetByCodeAsync(
-                    state.code,
-                    token);
-
-
-                if (course is null)
+                if (result is null)
                 {
                     throw new KeyNotFoundException(
                         $"Course '{state.code}' was not found.");
                 }
 
-
                 return new CourseDto
                 {
-                    Id = course.Id,
-                    Code = course.Code,
-                    Title = course.Title,
-                    Description = course.Description,
-                    MaxCapacity = course.MaxCapacity,
-                    EnrollmentCount = course.Enrollments.Count
+                    Id = result.Id,
+                    Code = result.Code,
+                    Title = result.Title,
+                    Description = result.Description,
+                    MaxCapacity = result.MaxCapacity,
+                    EnrollmentCount =
+                        result.Enrollments.Count
                 };
             },
             tags:
             [
                 CacheKeys.CoursesTag
             ],
-            cancellationToken: ct);
+            cancellationToken: cancellationToken);
 
-
-
-        if (!dbHit)
+        if (!cacheMiss)
         {
             logger.LogInformation(
                 "Cache HIT for {Key}",
                 key);
         }
 
-
-        return dto;
+        return course;
     }
-
-
 
     public async Task<IReadOnlyList<CourseResponseDto>> GetCoursesAsync(
         int page,
         int pageSize,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var key = CacheKeys.Courses(page, pageSize);
 
-        var dbHit = false;
-
+        var cacheMiss = false;
 
         var courses = await cache.GetOrCreateAsync(
             key,
-            (service, page, pageSize),
+            (courseService, page, pageSize),
             async (state, token) =>
             {
-                dbHit = true;
-
+                cacheMiss = true;
 
                 logger.LogInformation(
                     "Cache MISS for {Key}. Fetching courses.",
                     key);
 
-
                 var result =
-                    await state.service.GetAllCoursesAsync(
+                    await state.courseService.GetAllCoursesAsync(
                         state.page,
                         state.pageSize,
                         token);
-
-
 
                 return result
                     .Select(course => new CourseResponseDto
@@ -116,7 +105,8 @@ public class CachedCourseService(
                         Title = course.Title,
                         Description = course.Description,
                         MaxCapacity = course.MaxCapacity,
-                        EnrollmentCount = course.EnrollmentCount
+                        EnrollmentCount =
+                            course.EnrollmentCount
                     })
                     .ToList();
             },
@@ -124,49 +114,41 @@ public class CachedCourseService(
             [
                 CacheKeys.CoursesTag
             ],
-            cancellationToken: ct);
+            cancellationToken: cancellationToken);
 
-
-
-        if (!dbHit)
+        if (!cacheMiss)
         {
             logger.LogInformation(
                 "Cache HIT for {Key}",
                 key);
         }
 
-
         return courses;
     }
 
-
-
     public async Task<List<CourseDto>> GetAllCoursesAsync(
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         var key = CacheKeys.CoursesAll;
 
-        var dbHit = false;
-
+        var cacheMiss = false;
 
         var courses = await cache.GetOrCreateAsync(
             key,
-            service,
-            async (state, token) =>
+            courseService,
+            async (service, token) =>
             {
-                dbHit = true;
+                cacheMiss = true;
 
                 logger.LogInformation(
                     "Cache MISS for {Key}. Fetching all courses.",
                     key);
 
-
                 var result =
-                    await state.GetAllCoursesAsync(
+                    await service.GetAllCoursesAsync(
                         page: 1,
                         pageSize: 100,
-                        ct: token);
-
+                        token);
 
                 return result.ToList();
             },
@@ -174,36 +156,40 @@ public class CachedCourseService(
             [
                 CacheKeys.CoursesTag
             ],
-            cancellationToken: ct);
+            cancellationToken: cancellationToken);
 
-
-
-        if (!dbHit)
+        if (!cacheMiss)
         {
             logger.LogInformation(
                 "Cache HIT for {Key}",
                 key);
         }
 
-
         return courses;
     }
 
-
-
     public async Task InvalidateCourseCacheAsync(
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         logger.LogInformation(
             "Invalidating cache tag {Tag}",
             CacheKeys.CoursesTag);
 
-
-
         await cache.RemoveByTagAsync(
             CacheKeys.CoursesTag,
-            ct);
+            cancellationToken);
     }
 
-   
+    Task<List<CourseDto>> ICachedCourseService.GetAllCoursesAsync(CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task<IReadOnlyList<CourseResponseDto>> ICachedCourseService.GetCoursesAsync(int page, int pageSize, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
 }
+
+
+

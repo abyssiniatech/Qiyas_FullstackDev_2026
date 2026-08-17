@@ -12,3 +12,5 @@ public class AssessmentConfiguration
         builder.HasKey(a => a.Id);
     }
 }
+
+

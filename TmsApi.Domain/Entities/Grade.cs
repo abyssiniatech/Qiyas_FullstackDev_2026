@@ -1,8 +1,8 @@
 namespace TmsApi.Domain.Entities;
 
-public class Grade
+public sealed class Grade
 {
-    public int Id { get; set; }
+    public int GradeId { get; set; }
 
     public int StudentId { get; set; }
 
@@ -11,4 +11,10 @@ public class Grade
     public string AssessmentType { get; set; } = string.Empty;
 
     public decimal Score { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Student Student { get; set; } = null!;
+
+    public Course Course { get; set; } = null!;
 }

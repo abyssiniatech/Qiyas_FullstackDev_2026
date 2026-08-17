@@ -1,4 +1,5 @@
-﻿using System;
+using TmsApi.Infrastructure;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -28,3 +29,7 @@ namespace TmsApi.Migrations
         }
     }
 }
+
+
+
+

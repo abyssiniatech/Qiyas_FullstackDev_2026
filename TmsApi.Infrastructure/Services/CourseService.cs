@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Tms.Api.Dtos;
+using TmsApi.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using TmsApi.Application.Interfaces;
 using TmsApi.Domain.Entities;
 
@@ -200,3 +201,5 @@ public class CourseService : ICourseService
                 cancellationToken);
     }
 }
+
+

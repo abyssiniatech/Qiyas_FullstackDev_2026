@@ -13,3 +13,5 @@ public class CertificateConfiguration
         builder.HasKey(c => c.Id);
     }
 }
+
+

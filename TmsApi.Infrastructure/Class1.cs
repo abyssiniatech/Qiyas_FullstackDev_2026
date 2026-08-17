@@ -1,6 +1,9 @@
-﻿namespace TmsApi.Infrastructure;
+namespace TmsApi.Infrastructure;
 
 public class Class1
 {
 
 }
+
+
+

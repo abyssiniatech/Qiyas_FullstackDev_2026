@@ -21,3 +21,5 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
     }
 }
+
+

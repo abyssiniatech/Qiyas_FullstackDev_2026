@@ -26,3 +26,4 @@ public record TranscriptStatus(
     DateTimeOffset? CompletedAt = null,
     string? DownloadUrl = null,
     string? ErrorMessage = null);
+
