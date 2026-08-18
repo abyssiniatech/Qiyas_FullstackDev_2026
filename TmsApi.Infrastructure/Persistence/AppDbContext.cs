@@ -1,3 +1,4 @@
+
 using Microsoft.EntityFrameworkCore;
 using TmsApi.Domain.Entities;
 
@@ -22,12 +23,14 @@ public sealed class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // =========================
+        // =========================================================
         // Student
-        // =========================
+        // =========================================================
 
         modelBuilder.Entity<Student>(entity =>
         {
+            entity.ToTable("Students");
+
             entity.HasKey(s => s.Id);
 
             entity.Property(s => s.Name)
@@ -43,13 +46,14 @@ public sealed class AppDbContext : DbContext
                 .HasDefaultValue(true);
         });
 
-
-        // =========================
+        // =========================================================
         // Course
-        // =========================
+        // =========================================================
 
         modelBuilder.Entity<Course>(entity =>
         {
+            entity.ToTable("Courses");
+
             entity.HasKey(c => c.Id);
 
             entity.HasIndex(c => c.Code)
@@ -68,13 +72,14 @@ public sealed class AppDbContext : DbContext
                 .IsRequired();
         });
 
-
-        // =========================
+        // =========================================================
         // Enrollment
-        // =========================
+        // =========================================================
 
         modelBuilder.Entity<Enrollment>(entity =>
         {
+            entity.ToTable("Enrollments");
+
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.EnrolledAt)
@@ -98,34 +103,14 @@ public sealed class AppDbContext : DbContext
             .IsUnique();
         });
 
-
-        // =========================
+        // =========================================================
         // Grade
-        // =========================
+        // =========================================================
+        // Grade is configured by GradeConfiguration.cs.
+        // ApplyConfigurationsFromAssembly automatically discovers it.
+        // =========================================================
 
-        modelBuilder.Entity<Grade>(entity =>
-        {
-            entity.HasKey(g => g.GradeId);
-
-            entity.Property(g => g.AssessmentType)
-                .IsRequired()
-                .HasMaxLength(50);
-
-            entity.Property(g => g.Score)
-                .HasPrecision(5, 2);
-
-            entity.Property(g => g.CreatedAt)
-                .IsRequired();
-
-            entity.HasOne(g => g.Student)
-                .WithMany(s => s.Grades)
-                .HasForeignKey(g => g.StudentId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(g => g.Course)
-                .WithMany()
-                .HasForeignKey(g => g.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(AppDbContext).Assembly);
     }
 }
