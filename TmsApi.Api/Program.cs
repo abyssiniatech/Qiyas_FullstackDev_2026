@@ -245,19 +245,26 @@ builder.Services.AddHostedService<
 // CORS
 // ============================================================
 
+var allowedOrigins =
+    builder.Configuration
+        .GetSection("AllowedOrigins")
+        .Get<string[]>()
+    ?? ["http://localhost:4200"];
+
 builder.Services.AddCors(
     options =>
     {
         options.AddPolicy(
-            "AngularClient",
+            "TmsClient",
             policy =>
             {
                 policy
-                    .WithOrigins(
-                        "http://localhost:4200")
+                    .WithOrigins(allowedOrigins)
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowCredentials();
+                    .AllowCredentials()
+                    .SetPreflightMaxAge(
+                        TimeSpan.FromMinutes(10));
             });
     });
 
@@ -492,7 +499,7 @@ app.MapScalarApiReference(
 // CORS
 // ============================================================
 
-app.UseCors("AngularClient");
+app.UseCors("TmsClient");
 
 // ============================================================
 // Rate Limiting
