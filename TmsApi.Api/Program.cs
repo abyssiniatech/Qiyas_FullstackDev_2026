@@ -1,13 +1,15 @@
 
+
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
+
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 
 using Asp.Versioning;
 using FluentValidation;
 using MediatR;
-
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 
 using Scalar.AspNetCore;
 
@@ -52,6 +54,15 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// ============================================================
+// Antiforgery / XSRF
+// ============================================================
+
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+});
 
 // ============================================================
 // SignalR
@@ -212,17 +223,14 @@ builder.Services.AddScoped<
 // Transcript Processing
 // ============================================================
 
-// Status store
 builder.Services.AddSingleton<
     ITranscriptStatusStore,
     InMemoryTranscriptStatusStore>();
 
-// SignalR notification abstraction
 builder.Services.AddSingleton<
     ITranscriptNotificationService,
     SignalRTranscriptNotificationService>();
 
-// Bounded background queue
 builder.Services.AddSingleton<
     Channel<TranscriptRequest>>(
     _ =>
@@ -237,7 +245,6 @@ builder.Services.AddSingleton<
                 SingleWriter = false
             }));
 
-// Background worker
 builder.Services.AddHostedService<
     TranscriptWorker>();
 
@@ -508,17 +515,59 @@ app.UseCors("TmsClient");
 app.UseRateLimiter();
 
 // ============================================================
+// Authentication
+// ============================================================
+
+app.UseAuthentication();
+
+// ============================================================
 // Authorization
 // ============================================================
 
 app.UseAuthorization();
 
 // ============================================================
+// XSRF Cookie
+// ============================================================
+
+app.Use(
+    async (context, next) =>
+    {
+        if (context.Request.Cookies.ContainsKey("tms_auth"))
+        {
+            var antiforgery =
+                context.RequestServices
+                    .GetRequiredService<IAntiforgery>();
+
+            var tokens =
+                antiforgery.GetAndStoreTokens(
+                    context);
+
+            context.Response.Cookies.Append(
+                "XSRF-TOKEN",
+                tokens.RequestToken!,
+                new CookieOptions
+                {
+                    HttpOnly = false,
+
+                    Secure =
+                        !app.Environment
+                            .IsDevelopment(),
+
+                    SameSite =
+                        SameSiteMode.Strict,
+
+                    Path = "/"
+                });
+        }
+
+        await next(context);
+    });
+
+// ============================================================
 // SignalR
 // ============================================================
 
-// Angular proxy:
-// /hubs/* -> http://localhost:5071/hubs/*
 app.MapHub<TmsHub>(
     "/hubs/tms");
 
