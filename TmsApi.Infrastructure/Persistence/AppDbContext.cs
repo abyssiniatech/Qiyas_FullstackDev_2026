@@ -20,6 +20,7 @@ public sealed class AppDbContext :IdentityDbContext<TmsUser>
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
 
     public DbSet<Grade> Grades => Set<Grade>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

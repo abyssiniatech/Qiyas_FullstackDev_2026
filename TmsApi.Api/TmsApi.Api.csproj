@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
 
@@ -17,6 +17,7 @@
           to avoid CI/build noise. -->
         <NoWarn>$(NoWarn);NU1903</NoWarn>
 
+    <UserSecretsId>e9d06ff7-c91d-44e1-bf44-e06e0bb19a7e</UserSecretsId>
   </PropertyGroup>
 
 

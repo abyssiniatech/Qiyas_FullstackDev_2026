@@ -1,32 +1,45 @@
 
+using System.Text;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+
 using Asp.Versioning;
 using FluentValidation;
 using MediatR;
 using Scalar.AspNetCore;
+
 using TmsApi.Api.ExceptionHandlers;
 using TmsApi.Api.Hubs;
 using TmsApi.Api.RateLimiting;
+
 using TmsApi.Application.Behaviors;
 using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Application.Transcripts;
+
 using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Persistence.Services;
 using TmsApi.Infrastructure.Services;
 using TmsApi.Infrastructure.Workers;
+
 using TmsApi.Application.Notifications;
 using TmsApi.Application.Interfaces;
 using TmsApi.Application.Common;
+
 using Microsoft.AspNetCore.Identity;
 using TmsApi.Infrastructure.Identity;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// ============================================================
+// Identity
+// ============================================================
 
 builder.Services
     .AddIdentityCore<TmsUser>(options =>
@@ -46,6 +59,51 @@ builder.Services
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
 
+
+// ============================================================
+// Module 11 - JWT Authentication
+// ============================================================
+
+builder.Services.AddScoped<TokenService>();
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+
+                ValidateAudience = true,
+
+                ValidateLifetime = true,
+
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer =
+                    builder.Configuration["Jwt:Issuer"],
+
+                ValidAudience =
+                    builder.Configuration["Jwt:Audience"],
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            builder.Configuration["Jwt:Key"]!
+                        )
+                    )
+            };
+    });
+
+
 // ============================================================
 // Configuration
 // ============================================================
@@ -60,6 +118,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Check appsettings.json or appsettings.Development.json.");
 }
 
+
 // ============================================================
 // MVC / API
 // ============================================================
@@ -70,6 +129,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+
 // ============================================================
 // Antiforgery / XSRF
 // ============================================================
@@ -79,11 +139,13 @@ builder.Services.AddAntiforgery(options =>
     options.HeaderName = "X-XSRF-TOKEN";
 });
 
+
 // ============================================================
 // SignalR
 // ============================================================
 
 builder.Services.AddSignalR();
+
 
 // ============================================================
 // API Versioning
@@ -114,6 +176,7 @@ builder.Services
             true;
     });
 
+
 // ============================================================
 // OpenAPI
 // ============================================================
@@ -136,6 +199,7 @@ builder.Services.AddOpenApi(
                 description.GroupName == "v2";
     });
 
+
 // ============================================================
 // Database
 // ONE DbContext ONLY
@@ -146,6 +210,7 @@ builder.Services.AddDbContext<AppDbContext>(
     {
         options.UseNpgsql(connectionString);
     });
+
 
 // ============================================================
 // MediatR / CQRS
@@ -158,12 +223,14 @@ builder.Services.AddMediatR(
             typeof(EnrollStudentCommand).Assembly);
     });
 
+
 // ============================================================
 // FluentValidation
 // ============================================================
 
 builder.Services.AddValidatorsFromAssemblyContaining<
     EnrollStudentCommand>();
+
 
 // ============================================================
 // MediatR Pipeline Behaviors
@@ -176,6 +243,7 @@ builder.Services.AddTransient(
 builder.Services.AddTransient(
     typeof(IPipelineBehavior<,>),
     typeof(ValidationBehavior<,>));
+
 
 // ============================================================
 // Hybrid Cache
@@ -195,6 +263,7 @@ builder.Services.AddHybridCache(
                     TimeSpan.FromMinutes(2)
             };
     });
+
 
 // ============================================================
 // Application / Infrastructure Services
@@ -221,6 +290,7 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IGradeService,
     GradeService>();
+
 
 // ============================================================
 // Transcript Processing
@@ -251,6 +321,7 @@ builder.Services.AddSingleton<
 builder.Services.AddHostedService<
     TranscriptWorker>();
 
+
 // ============================================================
 // CORS
 // ============================================================
@@ -277,6 +348,7 @@ builder.Services.AddCors(
                         TimeSpan.FromMinutes(10));
             });
     });
+
 
 // ============================================================
 // Rate Limiting
@@ -458,11 +530,13 @@ builder.Services.AddRateLimiter(
             };
     });
 
+
 // ============================================================
 // Build Application
 // ============================================================
 
 var app = builder.Build();
+
 
 // ============================================================
 // ProblemDetails / Exception Handling
@@ -472,11 +546,13 @@ app.UseStatusCodePages();
 
 app.UseExceptionHandler();
 
+
 // ============================================================
 // OpenAPI
 // ============================================================
 
 app.MapOpenApi();
+
 
 // ============================================================
 // Scalar API Documentation
@@ -500,11 +576,13 @@ app.MapScalarApiReference(
                 "API Version 2.0");
     });
 
+
 // ============================================================
 // CORS
 // ============================================================
 
 app.UseCors("TmsClient");
+
 
 // ============================================================
 // Rate Limiting
@@ -512,17 +590,20 @@ app.UseCors("TmsClient");
 
 app.UseRateLimiter();
 
+
 // ============================================================
 // Authentication
 // ============================================================
 
 app.UseAuthentication();
 
+
 // ============================================================
 // Authorization
 // ============================================================
 
 app.UseAuthorization();
+
 
 // ============================================================
 // XSRF Cookie
@@ -566,6 +647,7 @@ app.Use(
         await next(context);
     });
 
+
 // ============================================================
 // SignalR
 // Module 10 - Part C
@@ -574,39 +656,62 @@ app.Use(
 app.MapHub<TmsHub>("/hubs/tms")
    .RequireCors("TmsClient");
 
+
 // ============================================================
 // Controllers
 // ============================================================
 
 app.MapControllers();
 
+
 // ============================================================
-// Run
+// Temporary Crypto Test
 // ============================================================
 
-
-// temporary test
 app.MapGet("/api/crypto/test", () =>
 {
-    var service = new TmsApi.Infrastructure.Services.CryptoDemoService();
+    var service =
+        new TmsApi.Infrastructure.Services
+            .CryptoDemoService();
 
     const string password = "Password123!";
 
-    var hash1 = service.HashUserPassword(password);
-    var hash2 = service.HashUserPassword(password);
+    var hash1 =
+        service.HashUserPassword(password);
 
-    var match1 = service.VerifyUserPassword(password, hash1);
-    var match2 = service.VerifyUserPassword(password, hash2);
+    var hash2 =
+        service.HashUserPassword(password);
 
-    return Results.Ok(new
-    {
-        Hash1 = hash1,
-        Hash2 = hash2,
-        HashesAreDifferent = hash1 != hash2,
-        Hash1Verified = match1,
-        Hash2Verified = match2
-    });
+    var match1 =
+        service.VerifyUserPassword(
+            password,
+            hash1);
+
+    var match2 =
+        service.VerifyUserPassword(
+            password,
+            hash2);
+
+    return Results.Ok(
+        new
+        {
+            Hash1 = hash1,
+            Hash2 = hash2,
+
+            HashesAreDifferent =
+                hash1 != hash2,
+
+            Hash1Verified =
+                match1,
+
+            Hash2Verified =
+                match2
+        });
 });
 
+
+// ============================================================
+// Run
+// ============================================================
 
 app.Run();
