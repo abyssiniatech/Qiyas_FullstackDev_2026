@@ -21,7 +21,30 @@ using TmsApi.Infrastructure.Workers;
 using TmsApi.Application.Notifications;
 using TmsApi.Application.Interfaces;
 using TmsApi.Application.Common;
+using Microsoft.AspNetCore.Identity;
+using TmsApi.Infrastructure.Identity;
+
+
 var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Services
+    .AddIdentityCore<TmsUser>(options =>
+    {
+        // Enterprise Password Policy
+        options.Password.RequiredLength = 12;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireDigit = true;
+        options.Password.RequireNonAlphanumeric = true;
+
+        // Brute-Force Lockout Protection
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan =
+            TimeSpan.FromMinutes(15);
+        options.Lockout.AllowedForNewUsers = true;
+    })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>();
 
 // ============================================================
 // Configuration
@@ -560,5 +583,30 @@ app.MapControllers();
 // ============================================================
 // Run
 // ============================================================
+
+
+// temporary test
+app.MapGet("/api/crypto/test", () =>
+{
+    var service = new TmsApi.Infrastructure.Services.CryptoDemoService();
+
+    const string password = "Password123!";
+
+    var hash1 = service.HashUserPassword(password);
+    var hash2 = service.HashUserPassword(password);
+
+    var match1 = service.VerifyUserPassword(password, hash1);
+    var match2 = service.VerifyUserPassword(password, hash2);
+
+    return Results.Ok(new
+    {
+        Hash1 = hash1,
+        Hash2 = hash2,
+        HashesAreDifferent = hash1 != hash2,
+        Hash1Verified = match1,
+        Hash2Verified = match2
+    });
+});
+
 
 app.Run();
