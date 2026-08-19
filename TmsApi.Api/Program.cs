@@ -1,34 +1,26 @@
 
-
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
-
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-
 using Asp.Versioning;
 using FluentValidation;
 using MediatR;
-
 using Scalar.AspNetCore;
-
 using TmsApi.Api.ExceptionHandlers;
 using TmsApi.Api.Hubs;
 using TmsApi.Api.RateLimiting;
-
 using TmsApi.Application.Behaviors;
-using TmsApi.Application.Common;
 using TmsApi.Application.Enrollments.Commands;
-using TmsApi.Application.Interfaces;
-using TmsApi.Application.Notifications;
 using TmsApi.Application.Transcripts;
-
 using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Persistence.Services;
 using TmsApi.Infrastructure.Services;
 using TmsApi.Infrastructure.Workers;
-
+using TmsApi.Application.Notifications;
+using TmsApi.Application.Interfaces;
+using TmsApi.Application.Common;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
@@ -185,16 +177,10 @@ builder.Services.AddHybridCache(
 // Application / Infrastructure Services
 // ============================================================
 
-// ------------------------------------------------------------
 // Student
-// ------------------------------------------------------------
-
 builder.Services.AddScoped<StudentService>();
 
-// ------------------------------------------------------------
 // Course
-// ------------------------------------------------------------
-
 builder.Services.AddScoped<
     ICourseService,
     CourseService>();
@@ -203,18 +189,12 @@ builder.Services.AddScoped<
     ICachedCourseService,
     CachedCourseService>();
 
-// ------------------------------------------------------------
 // Enrollment
-// ------------------------------------------------------------
-
 builder.Services.AddScoped<
     IEnrollmentService,
     EnrollmentService>();
 
-// ------------------------------------------------------------
 // Grade
-// ------------------------------------------------------------
-
 builder.Services.AddScoped<
     IGradeService,
     GradeService>();
@@ -319,13 +299,11 @@ builder.Services.AddRateLimiter(
                                             TokensPerPeriod = 100,
 
                                             ReplenishmentPeriod =
-                                                TimeSpan
-                                                    .FromSeconds(10),
+                                                TimeSpan.FromSeconds(10),
 
                                             QueueLimit = 0,
 
-                                            AutoReplenishment =
-                                                true
+                                            AutoReplenishment = true
                                         }),
 
                         ApiKeyTier.Free =>
@@ -340,13 +318,11 @@ builder.Services.AddRateLimiter(
                                             TokensPerPeriod = 10,
 
                                             ReplenishmentPeriod =
-                                                TimeSpan
-                                                    .FromSeconds(10),
+                                                TimeSpan.FromSeconds(10),
 
                                             QueueLimit = 0,
 
-                                            AutoReplenishment =
-                                                true
+                                            AutoReplenishment = true
                                         }),
 
                         _ =>
@@ -361,13 +337,11 @@ builder.Services.AddRateLimiter(
                                             TokensPerPeriod = 5,
 
                                             ReplenishmentPeriod =
-                                                TimeSpan
-                                                    .FromSeconds(10),
+                                                TimeSpan.FromSeconds(10),
 
                                             QueueLimit = 0,
 
-                                            AutoReplenishment =
-                                                true
+                                            AutoReplenishment = true
                                         })
                     };
                 });
@@ -405,8 +379,7 @@ builder.Services.AddRateLimiter(
 
                 limiter.QueueLimit = 2;
 
-                limiter.AutoReplenishment =
-                    true;
+                limiter.AutoReplenishment = true;
             });
 
         // ----------------------------------------------------
@@ -469,8 +442,10 @@ builder.Services.AddRateLimiter(
 var app = builder.Build();
 
 // ============================================================
-// Global Error Handling
+// ProblemDetails / Exception Handling
 // ============================================================
+
+app.UseStatusCodePages();
 
 app.UseExceptionHandler();
 
@@ -543,22 +518,26 @@ app.Use(
                 antiforgery.GetAndStoreTokens(
                     context);
 
-            context.Response.Cookies.Append(
-                "XSRF-TOKEN",
-                tokens.RequestToken!,
-                new CookieOptions
-                {
-                    HttpOnly = false,
+            if (!string.IsNullOrWhiteSpace(
+                    tokens.RequestToken))
+            {
+                context.Response.Cookies.Append(
+                    "XSRF-TOKEN",
+                    tokens.RequestToken,
+                    new CookieOptions
+                    {
+                        HttpOnly = false,
 
-                    Secure =
-                        !app.Environment
-                            .IsDevelopment(),
+                        Secure =
+                            !app.Environment
+                                .IsDevelopment(),
 
-                    SameSite =
-                        SameSiteMode.Strict,
+                        SameSite =
+                            SameSiteMode.Strict,
 
-                    Path = "/"
-                });
+                        Path = "/"
+                    });
+            }
         }
 
         await next(context);
@@ -566,10 +545,11 @@ app.Use(
 
 // ============================================================
 // SignalR
+// Module 10 - Part C
 // ============================================================
 
-app.MapHub<TmsHub>(
-    "/hubs/tms");
+app.MapHub<TmsHub>("/hubs/tms")
+   .RequireCors("TmsClient");
 
 // ============================================================
 // Controllers
