@@ -6,6 +6,7 @@ using TmsApi.Domain.Entities;
 using TmsApi.Infrastructure.Identity;
 using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Services;
+
 namespace TmsApi.Api.Controllers;
 
 [ApiController]
@@ -30,6 +31,98 @@ public class AuthController : ControllerBase
     }
 
     // =========================================================
+    // REGISTER
+    // POST: /api/auth/register
+    // =========================================================
+
+    public record RegisterRequest(
+        string Email,
+        string Password,
+        string FirstName,
+        string LastName,
+        string Role);
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(
+        [FromBody] RegisterRequest request)
+    {
+        // Check whether the user already exists
+        var existingUser =
+            await _userManager.FindByEmailAsync(request.Email);
+
+        if (existingUser != null)
+        {
+            // Generic response prevents account enumeration
+            return Ok(new
+            {
+                message = "Registration request received."
+            });
+        }
+
+        // Create Identity user
+        // We use the email as the username.
+        var user = new TmsUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName
+        };
+
+        // UserManager applies the configured password policy
+        var result =
+            await _userManager.CreateAsync(
+                user,
+                request.Password);
+
+        if (!result.Succeeded)
+        {
+            var errors =
+                result.Errors.Select(e => e.Description);
+
+            return BadRequest(new
+            {
+                errors
+            });
+        }
+
+        if (!await _roleManager.RoleExistsAsync(request.Role))
+        {
+            var roleResult =
+                await _roleManager.CreateAsync(
+                    new IdentityRole(request.Role));
+
+            if (!roleResult.Succeeded)
+            {
+                return BadRequest(new
+                {
+                    errors = roleResult.Errors.Select(e => e.Description)
+                });
+            }
+        }
+
+        // Assign role to user
+        var roleAssignmentResult =
+            await _userManager.AddToRoleAsync(
+                user,
+                request.Role);
+
+        if (!roleAssignmentResult.Succeeded)
+        {
+            return BadRequest(new
+            {
+                errors = roleAssignmentResult.Errors
+                    .Select(e => e.Description)
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Registration successful."
+        });
+    }
+
+    // =========================================================
     // LOGIN
     // POST: /api/auth/login
     // =========================================================
@@ -38,8 +131,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request)
     {
-        var user =
-            await _userManager.FindByEmailAsync(request.Username);
+
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
 
         if (user == null)
         {
@@ -49,7 +143,10 @@ public class AuthController : ControllerBase
             });
         }
 
-        // Account lockout check
+        // =====================================================
+        // ACCOUNT LOCKOUT CHECK
+        // =====================================================
+
         if (await _userManager.IsLockedOutAsync(user))
         {
             return StatusCode(
@@ -61,7 +158,10 @@ public class AuthController : ControllerBase
                 });
         }
 
-        // Verify password
+        // =====================================================
+        // VERIFY PASSWORD
+        // =====================================================
+
         var validPassword =
             await _userManager.CheckPasswordAsync(
                 user,
@@ -69,6 +169,9 @@ public class AuthController : ControllerBase
 
         if (!validPassword)
         {
+            // Increment failed login counter.
+            // Identity will lock the account when the configured
+            // maximum failed attempts is reached.
             await _userManager.AccessFailedAsync(user);
 
             return Unauthorized(new
@@ -77,7 +180,10 @@ public class AuthController : ControllerBase
             });
         }
 
-        // Successful login
+        // =====================================================
+        // SUCCESSFUL LOGIN
+        // =====================================================
+
         await _userManager.ResetAccessFailedCountAsync(user);
 
         // Get user's roles
@@ -91,7 +197,7 @@ public class AuthController : ControllerBase
                 roles);
 
         // =====================================================
-        // Issue initial refresh token
+        // CREATE INITIAL REFRESH TOKEN
         // =====================================================
 
         var refreshToken = new RefreshToken
@@ -114,7 +220,10 @@ public class AuthController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        // Return both tokens
+        // =====================================================
+        // RETURN TOKEN PAIR
+        // =====================================================
+
         return Ok(new
         {
             accessToken,
@@ -124,14 +233,12 @@ public class AuthController : ControllerBase
         });
     }
 
-
     // =========================================================
     // REFRESH REQUEST
     // =========================================================
 
     public record RefreshRequest(
         string RefreshToken);
-
 
     // =========================================================
     // REFRESH TOKEN
@@ -142,7 +249,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshRequest request)
     {
-        // Find refresh token
+        // =====================================================
+        // FIND REFRESH TOKEN
+        // =====================================================
+
         var storedToken =
             await _context.RefreshTokens
                 .FirstOrDefaultAsync(
@@ -150,7 +260,6 @@ public class AuthController : ControllerBase
                         rt.Token ==
                         request.RefreshToken);
 
-        // Token does not exist
         if (storedToken == null)
         {
             return Unauthorized(new
@@ -161,9 +270,6 @@ public class AuthController : ControllerBase
 
         // =====================================================
         // THEFT DETECTION
-        // =====================================================
-        // If an already-used refresh token is submitted,
-        // revoke every refresh token belonging to that user.
         // =====================================================
 
         if (storedToken.IsUsed)
@@ -191,11 +297,11 @@ public class AuthController : ControllerBase
         }
 
         // =====================================================
-        // CHECK EXPIRATION / REVOCATION
+        // CHECK REVOCATION / EXPIRATION
         // =====================================================
 
         if (storedToken.IsRevoked ||
-            storedToken.ExpiresAt < DateTime.UtcNow)
+            storedToken.ExpiresAt <= DateTime.UtcNow)
         {
             return Unauthorized(new
             {
@@ -205,11 +311,42 @@ public class AuthController : ControllerBase
         }
 
         // =====================================================
+        // FIND USER
+        // =====================================================
+
+        var user =
+            await _userManager.FindByIdAsync(
+                storedToken.UserId);
+
+        if (user == null)
+        {
+            return Unauthorized(new
+            {
+                detail = "User no longer exists."
+            });
+        }
+
+        // =====================================================
         // MARK OLD TOKEN AS USED
         // =====================================================
 
         storedToken.IsUsed = true;
 
+        // =====================================================
+        // GET USER ROLES
+        // =====================================================
+
+        var roles =
+            await _userManager.GetRolesAsync(user);
+
+        // =====================================================
+        // GENERATE NEW ACCESS TOKEN
+        // =====================================================
+
+        var newAccessToken =
+            _tokenService.GenerateJwt(
+                user,
+                roles);
 
         // =====================================================
         // CREATE NEW REFRESH TOKEN
@@ -233,48 +370,11 @@ public class AuthController : ControllerBase
 
         _context.RefreshTokens.Add(newRefreshToken);
 
-
-        // =====================================================
-        // FIND USER
-        // =====================================================
-
-        var user =
-            await _userManager.FindByIdAsync(
-                storedToken.UserId);
-
-        if (user == null)
-        {
-            return Unauthorized(new
-            {
-                detail = "User no longer exists."
-            });
-        }
-
-
-        // =====================================================
-        // GET ROLES
-        // =====================================================
-
-        var roles =
-            await _userManager.GetRolesAsync(user);
-
-
-        // =====================================================
-        // GENERATE NEW ACCESS TOKEN
-        // =====================================================
-
-        var newAccessToken =
-            _tokenService.GenerateJwt(
-                user,
-                roles);
-
-
         // =====================================================
         // SAVE ROTATION
         // =====================================================
 
         await _context.SaveChangesAsync();
-
 
         // =====================================================
         // RETURN NEW TOKEN PAIR
@@ -282,8 +382,7 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            accessToken =
-                newAccessToken,
+            accessToken = newAccessToken,
 
             refreshToken =
                 newRefreshToken.Token
