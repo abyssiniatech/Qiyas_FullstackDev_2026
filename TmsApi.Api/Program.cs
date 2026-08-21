@@ -1,14 +1,19 @@
-
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
+
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+
 using Microsoft.EntityFrameworkCore;
+
 using Microsoft.IdentityModel.Tokens;
 
 using Asp.Versioning;
+
 using FluentValidation;
 using MediatR;
 using Scalar.AspNetCore;
@@ -18,20 +23,17 @@ using TmsApi.Api.Hubs;
 using TmsApi.Api.RateLimiting;
 
 using TmsApi.Application.Behaviors;
+using TmsApi.Application.Common;
 using TmsApi.Application.Enrollments.Commands;
+using TmsApi.Application.Interfaces;
+using TmsApi.Application.Notifications;
 using TmsApi.Application.Transcripts;
 
+using TmsApi.Infrastructure.Identity;
 using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Persistence.Services;
 using TmsApi.Infrastructure.Services;
 using TmsApi.Infrastructure.Workers;
-
-using TmsApi.Application.Notifications;
-using TmsApi.Application.Interfaces;
-using TmsApi.Application.Common;
-
-using Microsoft.AspNetCore.Identity;
-using TmsApi.Infrastructure.Identity;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,12 +54,32 @@ builder.Services
 
         // Brute-Force Lockout Protection
         options.Lockout.MaxFailedAccessAttempts = 5;
+
         options.Lockout.DefaultLockoutTimeSpan =
             TimeSpan.FromMinutes(15);
+
         options.Lockout.AllowedForNewUsers = true;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
+
+
+// ============================================================
+// Authorization Policy
+// ============================================================
+
+builder.Services
+    .AddAuthorizationBuilder()
+    .AddPolicy(
+        "CanEditCourse",
+        policy =>
+        {
+            policy.Requirements.Add(
+                new Tms.Api.Authorization.CourseInstructorRequirement());
+        });
+
+builder.Services.AddSingleton<IAuthorizationHandler,
+    Tms.Api.Authorization.CourseInstructorHandler>();
 
 
 // ============================================================
@@ -362,6 +384,27 @@ builder.Services.AddRateLimiter(
     options =>
     {
         // ----------------------------------------------------
+        // Exercise 7
+        // Authentication Rate Limiter
+        //
+        // Maximum:
+        // 5 login requests per minute
+        // ----------------------------------------------------
+
+        options.AddFixedWindowLimiter(
+            "AuthLimiter",
+            limiter =>
+            {
+                limiter.PermitLimit = 5;
+
+                limiter.Window =
+                    TimeSpan.FromMinutes(1);
+
+                limiter.QueueLimit = 0;
+            });
+
+
+        // ----------------------------------------------------
         // Global API Rate Limiter
         // ----------------------------------------------------
 
@@ -383,6 +426,10 @@ builder.Services.AddRateLimiter(
 
                     return tier switch
                     {
+                        // ------------------------------------
+                        // Paid
+                        // ------------------------------------
+
                         ApiKeyTier.Paid =>
                             RateLimitPartition
                                 .GetTokenBucketLimiter(
@@ -402,6 +449,11 @@ builder.Services.AddRateLimiter(
                                             AutoReplenishment = true
                                         }),
 
+
+                        // ------------------------------------
+                        // Free
+                        // ------------------------------------
+
                         ApiKeyTier.Free =>
                             RateLimitPartition
                                 .GetTokenBucketLimiter(
@@ -420,6 +472,11 @@ builder.Services.AddRateLimiter(
 
                                             AutoReplenishment = true
                                         }),
+
+
+                        // ------------------------------------
+                        // Anonymous
+                        // ------------------------------------
 
                         _ =>
                             RateLimitPartition
@@ -442,6 +499,7 @@ builder.Services.AddRateLimiter(
                     };
                 });
 
+
         // ----------------------------------------------------
         // Transcript Concurrency Limiter
         // ----------------------------------------------------
@@ -457,6 +515,7 @@ builder.Services.AddRateLimiter(
                 limiter.QueueProcessingOrder =
                     QueueProcessingOrder.OldestFirst;
             });
+
 
         // ----------------------------------------------------
         // Search Rate Limiter
@@ -478,8 +537,9 @@ builder.Services.AddRateLimiter(
                 limiter.AutoReplenishment = true;
             });
 
+
         // ----------------------------------------------------
-        // Rejection Response
+        // Rate Limit Rejection Response
         // ----------------------------------------------------
 
         options.RejectionStatusCode =
@@ -547,6 +607,38 @@ app.UseStatusCodePages();
 
 app.UseExceptionHandler();
 
+// ============================================================
+// Exercise 7
+// Security Response Headers
+// ============================================================
+
+app.Use(
+    async (context, next) =>
+    {
+        // Prevent MIME-type sniffing
+        context.Response.Headers["X-Content-Type-Options"] =
+            "nosniff";
+
+        // Prevent clickjacking
+        context.Response.Headers["X-Frame-Options"] =
+            "DENY";
+
+        // Control referrer information
+        context.Response.Headers["Referrer-Policy"] =
+            "strict-origin-when-cross-origin";
+
+        // Scalar requires a less restrictive script policy
+        // for its documentation UI.
+        if (!context.Request.Path.StartsWithSegments("/scalar"))
+        {
+            context.Response.Headers["Content-Security-Policy"] =
+                "default-src 'self'; " +
+                "script-src 'self'; " +
+                "style-src 'self' 'unsafe-inline';";
+        }
+
+        await next();
+    });
 
 // ============================================================
 // OpenAPI
@@ -555,17 +647,16 @@ app.UseExceptionHandler();
 app.MapOpenApi();
 
 
+
 // ============================================================
 // Scalar API Documentation
 // ============================================================
-
 app.MapScalarApiReference(
     options =>
     {
         options
             .WithTitle("TMS API Reference")
-            .WithTheme(
-                ScalarTheme.DeepSpace)
+            .WithTheme(ScalarTheme.DeepSpace)
             .WithDefaultHttpClient(
                 ScalarTarget.CSharp,
                 ScalarClient.HttpClient)
@@ -576,7 +667,6 @@ app.MapScalarApiReference(
                 "v2",
                 "API Version 2.0");
     });
-
 
 // ============================================================
 // CORS
@@ -669,46 +759,52 @@ app.MapControllers();
 // Temporary Crypto Test
 // ============================================================
 
-app.MapGet("/api/crypto/test", () =>
-{
-    var service =
-        new TmsApi.Infrastructure.Services
-            .CryptoDemoService();
+app.MapGet(
+    "/api/crypto/test",
+    () =>
+    {
+        var service =
+            new TmsApi.Infrastructure.Services
+                .CryptoDemoService();
 
-    const string password = "Password123!";
+        const string password =
+            "Password123!";
 
-    var hash1 =
-        service.HashUserPassword(password);
+        var hash1 =
+            service.HashUserPassword(
+                password);
 
-    var hash2 =
-        service.HashUserPassword(password);
+        var hash2 =
+            service.HashUserPassword(
+                password);
 
-    var match1 =
-        service.VerifyUserPassword(
-            password,
-            hash1);
+        var match1 =
+            service.VerifyUserPassword(
+                password,
+                hash1);
 
-    var match2 =
-        service.VerifyUserPassword(
-            password,
-            hash2);
+        var match2 =
+            service.VerifyUserPassword(
+                password,
+                hash2);
 
-    return Results.Ok(
-        new
-        {
-            Hash1 = hash1,
-            Hash2 = hash2,
+        return Results.Ok(
+            new
+            {
+                Hash1 = hash1,
 
-            HashesAreDifferent =
-                hash1 != hash2,
+                Hash2 = hash2,
 
-            Hash1Verified =
-                match1,
+                HashesAreDifferent =
+                    hash1 != hash2,
 
-            Hash2Verified =
-                match2
-        });
-});
+                Hash1Verified =
+                    match1,
+
+                Hash2Verified =
+                    match2
+            });
+    });
 
 
 // ============================================================
