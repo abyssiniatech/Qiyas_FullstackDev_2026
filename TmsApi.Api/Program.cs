@@ -66,6 +66,7 @@ builder.Services
 
 builder.Services.AddScoped<TokenService>();
 
+
 builder.Services
     .AddAuthentication(options =>
     {

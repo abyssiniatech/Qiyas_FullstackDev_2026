@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TmsApi.Application.Auth;
 using TmsApi.Domain.Entities;
 using TmsApi.Infrastructure.Identity;
 using TmsApi.Infrastructure.Persistence;
@@ -46,21 +45,17 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest request)
     {
-        // Check whether the user already exists
         var existingUser =
             await _userManager.FindByEmailAsync(request.Email);
 
         if (existingUser != null)
         {
-            // Generic response prevents account enumeration
             return Ok(new
             {
                 message = "Registration request received."
             });
         }
 
-        // Create Identity user
-        // We use the email as the username.
         var user = new TmsUser
         {
             UserName = request.Email,
@@ -69,39 +64,33 @@ public class AuthController : ControllerBase
             LastName = request.LastName
         };
 
-        // UserManager applies the configured password policy
-        var result =
-            await _userManager.CreateAsync(
-                user,
-                request.Password);
+        var result = await _userManager.CreateAsync(
+            user,
+            request.Password);
 
         if (!result.Succeeded)
         {
-            var errors =
-                result.Errors.Select(e => e.Description);
-
             return BadRequest(new
             {
-                errors
+                errors = result.Errors.Select(e => e.Description)
             });
         }
 
         if (!await _roleManager.RoleExistsAsync(request.Role))
         {
-            var roleResult =
-                await _roleManager.CreateAsync(
-                    new IdentityRole(request.Role));
+            var roleResult = await _roleManager.CreateAsync(
+                new IdentityRole(request.Role));
 
             if (!roleResult.Succeeded)
             {
                 return BadRequest(new
                 {
-                    errors = roleResult.Errors.Select(e => e.Description)
+                    errors = roleResult.Errors
+                        .Select(e => e.Description)
                 });
             }
         }
 
-        // Assign role to user
         var roleAssignmentResult =
             await _userManager.AddToRoleAsync(
                 user,
@@ -127,13 +116,16 @@ public class AuthController : ControllerBase
     // POST: /api/auth/login
     // =========================================================
 
+    public record LoginRequest(
+        string Email,
+        string Password);
+
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request)
     {
-
-
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var user =
+            await _userManager.FindByEmailAsync(request.Email);
 
         if (user == null)
         {
@@ -142,10 +134,6 @@ public class AuthController : ControllerBase
                 detail = "Invalid credentials."
             });
         }
-
-        // =====================================================
-        // ACCOUNT LOCKOUT CHECK
-        // =====================================================
 
         if (await _userManager.IsLockedOutAsync(user))
         {
@@ -158,10 +146,6 @@ public class AuthController : ControllerBase
                 });
         }
 
-        // =====================================================
-        // VERIFY PASSWORD
-        // =====================================================
-
         var validPassword =
             await _userManager.CheckPasswordAsync(
                 user,
@@ -169,9 +153,6 @@ public class AuthController : ControllerBase
 
         if (!validPassword)
         {
-            // Increment failed login counter.
-            // Identity will lock the account when the configured
-            // maximum failed attempts is reached.
             await _userManager.AccessFailedAsync(user);
 
             return Unauthorized(new
@@ -180,39 +161,30 @@ public class AuthController : ControllerBase
             });
         }
 
-        // =====================================================
-        // SUCCESSFUL LOGIN
-        // =====================================================
-
         await _userManager.ResetAccessFailedCountAsync(user);
 
-        // Get user's roles
         var roles =
             await _userManager.GetRolesAsync(user);
 
-        // Generate JWT access token
+        // -----------------------------------------------------
+        // Generate short-lived access token
+        // -----------------------------------------------------
+
         var accessToken =
             _tokenService.GenerateJwt(
                 user,
                 roles);
 
-        // =====================================================
-        // CREATE INITIAL REFRESH TOKEN
-        // =====================================================
+        // -----------------------------------------------------
+        // Generate initial refresh token
+        // -----------------------------------------------------
 
         var refreshToken = new RefreshToken
         {
-            Token =
-                Guid.NewGuid().ToString("N"),
-
-            UserId =
-                user.Id,
-
-            ExpiresAt =
-                DateTime.UtcNow.AddDays(7),
-
+            Token = Guid.NewGuid().ToString("N"),
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
             IsUsed = false,
-
             IsRevoked = false
         };
 
@@ -220,16 +192,10 @@ public class AuthController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        // =====================================================
-        // RETURN TOKEN PAIR
-        // =====================================================
-
         return Ok(new
         {
             accessToken,
-
-            refreshToken =
-                refreshToken.Token
+            refreshToken = refreshToken.Token
         });
     }
 
@@ -241,7 +207,7 @@ public class AuthController : ControllerBase
         string RefreshToken);
 
     // =========================================================
-    // REFRESH TOKEN
+    // REFRESH TOKEN ROTATION
     // POST: /api/auth/refresh
     // =========================================================
 
@@ -249,16 +215,26 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshRequest request)
     {
-        // =====================================================
-        // FIND REFRESH TOKEN
-        // =====================================================
+        // -----------------------------------------------------
+        // 1. Validate request
+        // -----------------------------------------------------
+
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return Unauthorized(new
+            {
+                detail = "Refresh token is required."
+            });
+        }
+
+        // -----------------------------------------------------
+        // 2. Find refresh token
+        // -----------------------------------------------------
 
         var storedToken =
             await _context.RefreshTokens
-                .FirstOrDefaultAsync(
-                    rt =>
-                        rt.Token ==
-                        request.RefreshToken);
+                .SingleOrDefaultAsync(
+                    rt => rt.Token == request.RefreshToken);
 
         if (storedToken == null)
         {
@@ -268,18 +244,21 @@ public class AuthController : ControllerBase
             });
         }
 
-        // =====================================================
-        // THEFT DETECTION
-        // =====================================================
+        // -----------------------------------------------------
+        // 3. Theft detection
+        //
+        // An already-used refresh token must NEVER be accepted.
+        // Reuse means the token may have been stolen.
+        // Revoke every refresh token belonging to the user.
+        // -----------------------------------------------------
 
         if (storedToken.IsUsed)
         {
             var userTokens =
                 await _context.RefreshTokens
-                    .Where(
-                        rt =>
-                            rt.UserId ==
-                            storedToken.UserId)
+                    .Where(rt =>
+                        rt.UserId == storedToken.UserId &&
+                        !rt.IsRevoked)
                     .ToListAsync();
 
             foreach (var token in userTokens)
@@ -296,23 +275,29 @@ public class AuthController : ControllerBase
             });
         }
 
-        // =====================================================
-        // CHECK REVOCATION / EXPIRATION
-        // =====================================================
+        // -----------------------------------------------------
+        // 4. Check expiration/revocation
+        // -----------------------------------------------------
 
-        if (storedToken.IsRevoked ||
-            storedToken.ExpiresAt <= DateTime.UtcNow)
+        if (storedToken.IsRevoked)
         {
             return Unauthorized(new
             {
-                detail =
-                    "Refresh token expired or revoked."
+                detail = "Refresh token has been revoked."
             });
         }
 
-        // =====================================================
-        // FIND USER
-        // =====================================================
+        if (storedToken.ExpiresAt <= DateTime.UtcNow)
+        {
+            return Unauthorized(new
+            {
+                detail = "Refresh token has expired."
+            });
+        }
+
+        // -----------------------------------------------------
+        // 5. Find user
+        // -----------------------------------------------------
 
         var user =
             await _userManager.FindByIdAsync(
@@ -326,66 +311,57 @@ public class AuthController : ControllerBase
             });
         }
 
-        // =====================================================
-        // MARK OLD TOKEN AS USED
-        // =====================================================
-
-        storedToken.IsUsed = true;
-
-        // =====================================================
-        // GET USER ROLES
-        // =====================================================
+        // -----------------------------------------------------
+        // 6. Get current roles
+        // -----------------------------------------------------
 
         var roles =
             await _userManager.GetRolesAsync(user);
 
-        // =====================================================
-        // GENERATE NEW ACCESS TOKEN
-        // =====================================================
+        // -----------------------------------------------------
+        // 7. Generate NEW access token
+        // -----------------------------------------------------
 
         var newAccessToken =
             _tokenService.GenerateJwt(
                 user,
                 roles);
 
-        // =====================================================
-        // CREATE NEW REFRESH TOKEN
-        // =====================================================
+        // -----------------------------------------------------
+        // 8. Mark OLD refresh token as used
+        // -----------------------------------------------------
+
+        storedToken.IsUsed = true;
+
+        // -----------------------------------------------------
+        // 9. Generate NEW refresh token
+        // -----------------------------------------------------
 
         var newRefreshToken = new RefreshToken
         {
-            Token =
-                Guid.NewGuid().ToString("N"),
-
-            UserId =
-                storedToken.UserId,
-
-            ExpiresAt =
-                DateTime.UtcNow.AddDays(7),
-
+            Token = Guid.NewGuid().ToString("N"),
+            UserId = storedToken.UserId,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
             IsUsed = false,
-
             IsRevoked = false
         };
 
         _context.RefreshTokens.Add(newRefreshToken);
 
-        // =====================================================
-        // SAVE ROTATION
-        // =====================================================
+        // -----------------------------------------------------
+        // 10. Persist rotation
+        // -----------------------------------------------------
 
         await _context.SaveChangesAsync();
 
-        // =====================================================
-        // RETURN NEW TOKEN PAIR
-        // =====================================================
+        // -----------------------------------------------------
+        // 11. Return NEW token pair
+        // -----------------------------------------------------
 
         return Ok(new
         {
             accessToken = newAccessToken,
-
-            refreshToken =
-                newRefreshToken.Token
+            refreshToken = newRefreshToken.Token
         });
     }
 }
