@@ -7,7 +7,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
-
+using Microsoft.OpenApi;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 
 using Microsoft.IdentityModel.Tokens;
@@ -212,6 +213,7 @@ builder.Services.AddOpenApi(
             description =>
                 description.GroupName == "v1";
     });
+
 
 builder.Services.AddOpenApi(
     "v2",

@@ -31,7 +31,6 @@ public class CourseController : ControllerBase
         this.context = context;
     }
 
-
     // ============================================================
     // GET api/courses?page=1&pageSize=10
     // ============================================================
@@ -47,14 +46,12 @@ public class CourseController : ControllerBase
     {
         if (page <= 0)
         {
-            return BadRequest(
-                "Page must be greater than zero.");
+            return BadRequest("Page must be greater than zero.");
         }
 
         if (pageSize <= 0)
         {
-            return BadRequest(
-                "PageSize must be greater than zero.");
+            return BadRequest("PageSize must be greater than zero.");
         }
 
         var courses =
@@ -65,7 +62,6 @@ public class CourseController : ControllerBase
 
         return Ok(courses);
     }
-
 
     // ============================================================
     // GET api/courses/{id}
@@ -95,7 +91,6 @@ public class CourseController : ControllerBase
         return Ok(course);
     }
 
-
     // ============================================================
     // POST api/courses
     // ============================================================
@@ -122,7 +117,6 @@ public class CourseController : ControllerBase
             course);
     }
 
-
     // ============================================================
     // PUT api/courses/{id}
     // Exercise 5 - Resource-Based Authorization
@@ -144,10 +138,7 @@ public class CourseController : ControllerBase
         [FromBody] CourseDto request,
         CancellationToken ct)
     {
-        // --------------------------------------------------------
-        // 1. Load the actual Course entity.
-        // --------------------------------------------------------
-
+        // 1. Load the actual course resource.
         var course =
             await context.Courses.FindAsync(
                 new object[] { id },
@@ -158,18 +149,7 @@ public class CourseController : ControllerBase
             return NotFound();
         }
 
-
-        // --------------------------------------------------------
         // 2. Resource-based authorization.
-        //
-        // Admin:
-        //     Can edit any course.
-        //
-        // Instructor:
-        //     Can edit only a course where
-        //     InstructorId == logged-in user's ID.
-        // --------------------------------------------------------
-
         var authorizationResult =
             await authorizationService.AuthorizeAsync(
                 User,
@@ -181,13 +161,7 @@ public class CourseController : ControllerBase
             return Forbid();
         }
 
-
-        // --------------------------------------------------------
-        // 3. Authorization succeeded.
-        //    Now perform the actual update through
-        //    your existing application service.
-        // --------------------------------------------------------
-
+        // 3. Perform the update.
         var updatedCourse =
             await courseService.UpdateCourseAsync(
                 id,
@@ -202,14 +176,18 @@ public class CourseController : ControllerBase
         return Ok(updatedCourse);
     }
 
-
     // ============================================================
     // DELETE api/courses/{id}
+    // Resource-Based Authorization
     // ============================================================
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Instructor,Admin")]
     [ProducesResponseType(
         StatusCodes.Status204NoContent)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status403Forbidden)]
     [ProducesResponseType(
         typeof(ProblemDetails),
         StatusCodes.Status404NotFound)]
@@ -217,6 +195,32 @@ public class CourseController : ControllerBase
         int id,
         CancellationToken ct)
     {
+        // 1. Load the actual course resource.
+        var course =
+            await context.Courses.FindAsync(
+                new object[] { id },
+                ct);
+
+        if (course is null)
+        {
+            return NotFound();
+        }
+
+        // 2. Resource-based authorization.
+        // Admin can delete any course.
+        // Instructor can delete only their own course.
+        var authorizationResult =
+            await authorizationService.AuthorizeAsync(
+                User,
+                course,
+                "CanEditCourse");
+
+        if (!authorizationResult.Succeeded)
+        {
+            return Forbid();
+        }
+
+        // 3. Delete only after authorization succeeds.
         await courseService.DeleteCourseAsync(
             id,
             ct);
