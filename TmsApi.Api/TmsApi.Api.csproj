@@ -12,12 +12,13 @@
 
     <AssemblyName>TmsApi</AssemblyName>
 
-        <!-- Suppress NU1903 warning about a known vulnerable transitive package (Microsoft.OpenApi).
-          The project intentionally uses Microsoft.AspNetCore.OpenApi instead; suppress the advisory
-          to avoid CI/build noise. -->
-        <NoWarn>$(NoWarn);NU1903</NoWarn>
+    <!-- Suppress NU1903 warning about a known vulnerable transitive package (Microsoft.OpenApi).
+         The project intentionally uses Microsoft.AspNetCore.OpenApi instead; suppress the advisory
+         to avoid CI/build noise. -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
 
     <UserSecretsId>e9d06ff7-c91d-44e1-bf44-e06e0bb19a7e</UserSecretsId>
+
   </PropertyGroup>
 
 
@@ -43,8 +44,7 @@
 
     <!-- ========================= -->
     <!-- OpenAPI + Scalar Docs -->
-
-    <!-- Removed vulnerable Microsoft.OpenApi package (2.0.1). Use Microsoft.AspNetCore.OpenApi (included below) instead. -->
+    <!-- ========================= -->
 
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
 
@@ -67,23 +67,39 @@
 
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.15" />
 
-
     <!-- ========================= -->
     <!-- Entity Framework Core -->
     <!-- ========================= -->
-
 
     <!-- ========================= -->
     <!-- PostgreSQL Provider -->
     <!-- ========================= -->
 
-
   </ItemGroup>
 
 
   <ItemGroup>
+
     <ProjectReference Include="..\TmsApi.Application\TmsApi.Application.csproj" />
+
     <ProjectReference Include="..\TmsApi.Infrastructure\TmsApi.Infrastructure.csproj" />
+
+  </ItemGroup>
+
+
+  <!-- ========================= -->
+  <!-- Integration Test Access -->
+  <!-- ========================= -->
+
+  <ItemGroup>
+
+    <AssemblyAttribute
+      Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+
+      <_Parameter1>TmsApi.Tests</_Parameter1>
+
+    </AssemblyAttribute>
+
   </ItemGroup>
 
 

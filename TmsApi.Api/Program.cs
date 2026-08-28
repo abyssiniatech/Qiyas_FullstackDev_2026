@@ -814,3 +814,4 @@ app.MapGet(
 // ============================================================
 
 app.Run();
+public partial class Program { }
